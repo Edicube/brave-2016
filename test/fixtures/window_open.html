@@ -1,0 +1,21 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>window.open</title>
+</head>
+<body>
+  <a href="#" id="trigger">Trigger Window Open</a>
+  <script type="text/javascript">
+    var global = {}
+    document.getElementById('trigger').addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (global.triggerFunction !== undefined) {
+        window.WINDOW_REF = global.triggerFunction();
+      } else {
+        window.WINDOW_REF = window.open(`http://${window.location.host}/page1.html`);
+      }
+    });
+  </script>
+</body>
+</html>

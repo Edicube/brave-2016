@@ -1,0 +1,192 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+const Bridge = require('./lib/bridge')
+const messages = require('./constants/messages')
+const WindowActions = require('./actions/windowActions')
+const AppActions = require('./actions/appActions')
+const SiteTags = require('./constants/siteTags')
+
+function tabPageTemplateInit (framePropsList) {
+  const muteAll = (framePropsList, mute) => {
+    framePropsList.forEach(frameProps => {
+      if (mute && frameProps.get('audioPlaybackActive') && !frameProps.get('audioMuted')) {
+        WindowActions.setAudioMuted(frameProps, true)
+      } else if (!mute && frameProps.get('audioMuted')) {
+        WindowActions.setAudioMuted(frameProps, false)
+      }
+    })
+  }
+  return [{
+    label: 'Unmute tabs',
+    click: (item, focusedWindow) => {
+      muteAll(framePropsList, false)
+    }
+  }, {
+    label: 'Mute tabs',
+    click: (item, focusedWindow) => {
+      muteAll(framePropsList, true)
+    }
+  }]
+}
+
+function tabTemplateInit (frameProps) {
+  const tabKey = frameProps.get('key')
+  const items = []
+  items.push({
+    label: 'Reload tab',
+    click: (item, focusedWindow) => {
+      if (focusedWindow) {
+        focusedWindow.webContents.send(messages.SHORTCUT_FRAME_RELOAD, tabKey)
+      }
+    }
+  })
+
+  if (frameProps.get('isPinned')) {
+    items.push({
+      label: 'Unpin tab',
+      click: (item) => {
+        // Handle converting the current tab window into a pinned site
+        WindowActions.setPinned(frameProps, false)
+        // Handle setting it in app storage for the other windows
+        AppActions.removeSite(frameProps, SiteTags.PINNED)
+      }
+    })
+  } else {
+    items.push({
+      label: 'Pin tab',
+      click: (item) => {
+        // Handle converting the current tab window into a pinned site
+        WindowActions.setPinned(frameProps, true)
+        // Handle setting it in app storage for the other windows
+        AppActions.addSite(frameProps, SiteTags.PINNED)
+      }
+    })
+  }
+
+  if (frameProps.get('audioPlaybackActive')) {
+    if (frameProps.get('audioMuted')) {
+      items.push({
+        label: 'Unmute tab',
+        click: item => {
+          WindowActions.setAudioMuted(frameProps, false)
+        }
+      })
+    } else {
+      items.push({
+        label: 'Mute tab',
+        click: item => {
+          WindowActions.setAudioMuted(frameProps, true)
+        }
+      })
+    }
+  }
+
+  Array.prototype.push.apply(items, [{
+    label: 'Disable tracking protection',
+    enabled: false
+  }, {
+    label: 'Disable ad block',
+    enabled: false
+  }])
+
+  if (!frameProps.get('isPinned')) {
+    items.push({
+      label: 'Close tab',
+      click: (item, focusedWindow) => {
+        if (focusedWindow) {
+          // TODO: Don't switch active tabs when this is called
+          focusedWindow.webContents.send(messages.SHORTCUT_CLOSE_FRAME, tabKey)
+        }
+      }
+    })
+  }
+
+  return items
+}
+
+function mainTemplateInit (nodeProps) {
+  let template = [
+    {
+      label: 'Reload',
+      click: (item, focusedWindow) => {
+        if (focusedWindow) {
+          focusedWindow.webContents.send(messages.SHORTCUT_ACTIVE_FRAME_RELOAD)
+        }
+      }
+    }, {
+      label: 'View Page Source',
+      click: (item, focusedWindow) => {
+        if (focusedWindow) {
+          focusedWindow.webContents.send(messages.SHORTCUT_ACTIVE_FRAME_VIEW_SOURCE)
+        }
+      }
+    }, {
+      label: 'Add bookmark',
+      enabled: false
+    }, {
+      label: 'Add to reading list',
+      enabled: false
+    }
+  ]
+  let nodeName = nodeProps.name
+  switch (nodeName) {
+    case 'A':
+      template.push({
+        label: 'Open in new tab',
+        click: (item, focusedWindow) => {
+          if (focusedWindow && nodeProps.src) {
+            // TODO: open this in the next tab instead of last tab
+            // TODO: If the tab is private, this should probably be private.
+            // Depends on #139
+            focusedWindow.webContents.send(messages.SHORTCUT_NEW_FRAME, nodeProps.src)
+          }
+        }
+      })
+      template.push({
+        label: 'Open in new private tab',
+        click: (item, focusedWindow) => {
+          if (focusedWindow && nodeProps.src) {
+            // TODO: open this in the next tab instead of last tab
+            focusedWindow.webContents.send(messages.SHORTCUT_NEW_FRAME, nodeProps.src, true)
+          }
+        }
+      })
+      break
+    case 'IMG':
+      template.push({
+        label: 'Save image...',
+        click: (item, focusedWindow) => {
+          if (focusedWindow && nodeProps.src) {
+            focusedWindow.webContents.downloadURL(nodeProps.src)
+          }
+        }
+      })
+      template.push({
+        label: 'Open image in new tab',
+        click: (item, focusedWindow) => {
+          if (focusedWindow && nodeProps.src) {
+            // TODO: open this in the next tab instead of last tab
+            focusedWindow.webContents.send(messages.SHORTCUT_NEW_FRAME, nodeProps.src)
+          }
+        }
+      })
+      break
+  }
+  return template
+}
+
+export function onMainContextMenu (nodeProps) {
+  Bridge.popupMenu(mainTemplateInit(nodeProps))
+}
+
+export function onTabContextMenu (frameProps, e) {
+  e.preventDefault()
+  Bridge.popupMenu(tabTemplateInit(frameProps))
+}
+
+export function onTabPageContextMenu (framePropsList, e) {
+  e.preventDefault()
+  Bridge.popupMenu(tabPageTemplateInit(framePropsList))
+}

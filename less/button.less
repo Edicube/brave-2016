@@ -1,0 +1,41 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+@import "variables.less";
+
+span.browserButton {
+  cursor: default;
+  display: inline-block;
+  line-height: 28px;
+  width: 30px;
+  height: 30px;
+  font-size: 20px;
+  color: @buttonColor;
+  border-radius: 30px;
+  margin: 0 3px;
+  text-align: center;
+  transition: .1s opacity, .1s background;
+
+  &:not([disabled]):hover {
+    color: black;
+  }
+
+  &[disabled] {
+    opacity: .25;
+    pointer-events: none;
+  }
+
+  &.smallButton {
+    line-height: 18px;
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+  }
+}
+
+span.browserButton.newFrameButton {
+  font-family: helvetica;
+  width: 26px;
+  vertical-align: middle;
+}

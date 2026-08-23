@@ -1,0 +1,57 @@
+{
+  "name": "brave",
+  "version": "0.7.7",
+  "description": "Brave laptop and desktop browser (2016 revival)",
+  "main": "./app/index.js",
+  "scripts": {
+    "build": "node ./tools/build.js",
+    "watch": "node ./tools/build.js --watch",
+    "start": "npm run build && electron . --enable-logging",
+    "lint": "standard",
+    "test": "node --test \"test/unit/*.test.js\"",
+    "harden": "node ./tools/fuses.js",
+    "verify-fuses": "node ./tools/fuses.js --verify",
+    "postinstall": "npm run harden && npm run verify-fuses",
+    "package": "npm run build && node ./tools/package.js"
+  },
+  "repository": "brave/browser-laptop",
+  "author": {
+    "name": "Brave Developers <support@brave.com>"
+  },
+  "license": "MPL-2.0",
+  "dependencies": {
+    "@ghostery/adblocker": "^2.18.2",
+    "electron-localshortcut": "^3.2.1",
+    "events": "^3.3.0",
+    "font-awesome": "^4.7.0",
+    "immutable": "^5.1.9",
+    "path-browserify": "^1.0.1",
+    "prop-types": "^15.8.1",
+    "react": "^16.14.0",
+    "react-dom": "^16.14.0",
+    "url": "^0.11.4",
+    "urlutil.js": "^0.1.1"
+  },
+  "devDependencies": {
+    "@electron/fuses": "^2.1.3",
+    "@electron/packager": "^20.3.0",
+    "electron": "^43.4.1",
+    "esbuild": "^0.25.0",
+    "less": "^4.2.0",
+    "standard": "^17.1.2"
+  },
+  "standard": {
+    "ignore": [
+      "app/gen/**",
+      "app/ext/**",
+      "js/data/**",
+      "less/**",
+      "res/**",
+      "dist/**"
+    ]
+  },
+  "engines": {
+    "node": ">= 18.0.0"
+  },
+  "productName": "Brave 2016"
+}

@@ -1,0 +1,222 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/**
+ * Navigation layers
+ */
+
+@import "variables.less";
+
+#navigator {
+  font-size: 20px;
+  height: 34px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 135px 4px 145px;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  -webkit-user-select: none;
+
+  &.titleMode {
+    input {
+      background: @chromePrimary;
+      color: white;
+      text-align: center;
+      font-size: 15px;
+      /*
+      &:focus {
+        -webkit-user-select: none;
+        background: @chromePrimary;
+        color: white;
+      }
+      */
+    }
+    .startButtons, .endButtons {
+      visibility: hidden;
+    }
+  }
+
+  .loadTime {
+    color: @loadTimeColor;
+    font-size: 12px;
+    position: absolute;
+    right: 10px;
+    text-align: right;
+    top: 7px;
+  }
+
+  /* Disable selection of button text */
+  > span {
+     -webkit-user-select: none;
+  }
+
+  > * {
+    -moz-window-dragging: no-drag;
+  }
+
+  form {
+    flex: 1;
+    position: relative;
+  }
+
+  input {
+    background: @navigationBarBackground;
+    border: none;
+    border-radius: 13px;
+    box-sizing: border-box;
+    color: #fff;
+    font-size: @defaultFontSize;
+    font-weight: normal;
+    height: 24px;
+    margin: 0 0 0 1px;
+    padding: 0 70px 0 25px;
+    text-overflow: ellipsis;
+    width: 100%;
+
+    &:hover {
+      background: @chromeControlsBackground2;
+    }
+
+    &:focus {
+      background: #fff;
+      border: 1px solid @focusUrlbarOutline;
+      box-shadow: 0 0 4px @focusUrlbarOutline, inset 0 0 4px @focusUrlbarOutline;
+      color: #333333;
+      outline: none;
+    }
+
+    &.private {
+      background: @privateTabBackground;
+      color: #fff;
+    }
+  }
+
+  span.navbutton.remove-bookmark-button {
+    color: yellow;
+  }
+
+  &:not(.bookmarked) .remove-bookmark-button,
+  &.bookmarked .bookmark-button,
+  &:not(.loading) .stop-button,
+  &.loading .reload-button {
+    display: none;
+  }
+
+  .urlbarIcon {
+    color: #555;
+    position: absolute;
+    top: 6px;
+    left: 9px;
+    font-size: 15px;
+    min-height: 16px;
+    min-width: 16px;
+
+    &.extendedValidation {
+      color: green;
+    }
+  }
+
+  ul.urlBarSuggestions {
+    .flyoutDialog;
+    box-sizing: border-box;
+    width: 100%;
+    z-index: 311;
+
+    .suggestionIcon {
+      margin-right: 10px;
+    }
+
+    .suggestionText {
+      display: inline-block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      width: calc(~'100% - 30px');
+      vertical-align: middle;
+    }
+
+    li {
+      list-style-type: none;
+      padding: 10px 0;
+      z-index: 333;
+
+      &.selected {
+        color: @highlightBlue;
+      }
+      * {
+        /* To allow for mouse listeners to work on the list items. */
+        pointer-events: none;
+      }
+    }
+
+    li + li {
+      border-top: 1px solid @chromeControlsBackground;
+    }
+  }
+}
+
+.flyoutDialog {
+  background-color: #eeeeee;
+  border-radius: 9px;
+  box-shadow: 2px 2px 8px #3b3b3b;
+  color: #000;
+  font-size: 13px;
+  padding: 10px 30px;
+  position: absolute;
+  text-align: left;
+  top: 48px;
+}
+
+.releaseNotes {
+  .flyoutDialog;
+  width: auto;
+  margin-left: -250px;
+  max-width: 350px;
+  text-align: left;
+
+  h1 {
+    margin-bottom: 10px;
+  }
+}
+
+.siteInfo {
+  >ul {
+    .flyoutDialog;
+    margin-left: -250px;
+    text-align: left;
+    width: auto;
+
+    li {
+      list-style-type: none;
+      padding: 10px 0;
+
+      .fa {
+        padding-right: 10px;
+      }
+      &.extendedValidation {
+        color: green;
+      }
+
+      ul {
+        font-size: smaller;
+        max-height: 300px;
+        overflow-y: scroll;
+        margin-top: -20px;
+        padding: 0 10px;
+        max-width: 350px;
+      }
+    }
+  }
+}
+
+.topLevelEndButtons .braveMenu {
+  background-image: -webkit-image-set(url(../app/img/braveBtn.png) 1x, url(../app/img/braveBtn2x.png) 2x, url(../app/img/braveBtn3x.png) 3x);
+  width: 23px;
+  height: 27px;
+  margin-top: 1px;
+  margin-right: 9px;
+}

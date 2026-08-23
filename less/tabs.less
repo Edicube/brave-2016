@@ -1,0 +1,288 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+@import "variables.less";
+
+.tabs {
+  background: @tabsBackground;
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  padding: 0 4px 0 6px;
+  height: 26px;
+  position: relative;
+  white-space: nowrap;
+  z-index: 310;
+}
+
+.tabContainer {
+  display: flex;
+  flex: 1;
+  z-index: 2;
+
+  .browserButton {
+    height: 26px;
+    line-height: 26px;
+  }
+}
+
+.tab {
+  border-radius: 10px;
+  border-top-left-radius: @tabBorderRadius;
+  border-top-right-radius: @tabBorderRadius;
+  border-width: 1px 1px 0;
+  box-sizing: border-box;
+  color: #3B3B3B;
+  display: flex;
+  height: 20px;
+  margin: 0;
+  position: relative;
+  transition: transform 200ms ease;
+  left: 0;
+  opacity: 1.0;
+  padding: 0;
+  width: 100%;
+  -moz-window-dragging: no-drag;
+
+  &:not(.isPinned) {
+    background: linear-gradient(to bottom, #BEBFC2, #AFB0B4);
+  }
+
+  .tabTitle {
+    -webkit-user-select: none;
+    box-sizing: border-box;
+    display: inline-block;
+    font-size: 11px;
+    margin: auto 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+    width: calc(~'100% - 26px');
+  }
+  .tabIcon {
+    background-position: center;
+    background-repeat: no-repeat;
+    display: inline-block;
+    font-size: 12px;
+    margin: auto 9px;
+    position: relative;
+    vertical-align: middle;
+  }
+
+  .privateIcon {
+    background-position: center;
+    background-repeat: no-repeat;
+    display: inline-block;
+    font-size: 14px;
+    margin: auto 0px auto 9px;
+    position: relative;
+    vertical-align: middle;
+  }
+
+
+  .audioPlaybackActive {
+    margin: auto 4px auto 0;
+    color: @audioColor;
+  }
+
+  .thumbnail {
+    display: none;
+    position: absolute;
+    top: 32px;
+    left: 0;
+    border: 1px solid #000;
+    padding: 10px;
+    background: #fff;
+    pointer-events: none;
+    z-index: 312;
+  }
+
+  &.active {
+    background: @activeTabDefaultColor;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    height: 26px;
+  }
+
+  &.private {
+    background: @privateTabBackground;
+    color: #fff;
+    &:not(.active) {
+      background: lighten(@privateTabBackground, 40%);
+    }
+  }
+
+  &:hover {
+    .closeTab {
+      opacity: 1;
+    }
+
+    .thumbnail {
+      display: block;
+    }
+  }
+
+  &:not(.active):hover {
+    background: linear-gradient(to bottom, #DFDFDF, #AFB0B4);
+    &.private {
+      background: lighten(@privateTabBackground, 20%);
+    }
+  }
+
+  &.dragging {
+    &:hover {
+      .closeTab {
+        opacity: 0;
+      }
+    }
+  }
+
+  .closeTab {
+    opacity: 0;
+    margin: auto 0;
+    position: absolute;
+    right: 0px;
+    text-align: center;
+    top: 2px;
+    width: 24px;
+
+    &:hover {
+      opacity: 1;
+    }
+
+    border: 0px solid white;
+    border-radius: 50%;
+    z-index: 3;
+  }
+}
+
+.tabArea {
+  box-sizing: border-box;
+  display: inline-block;
+  padding: 0 2px 0 0;
+  position: relative;
+  vertical-align: top;
+  // There's a special case that tabs should span the full width
+  // if there are a full set of them.
+  &:not(.partOfFullPageSet) {
+    max-width: 184px;
+  }
+
+  &:not(.isPinned) {
+    flex: 1;
+  }
+
+  hr.dragIndicator {
+    position: absolute;
+    top: 0;
+    left: -1px;
+    z-index: 100;
+    height: 100%;
+    width: 1px;
+
+    &.dragIndicatorEnd {
+      bottom: -5px;
+      top: 0;
+      right: -3px;
+      left: unset;
+    }
+
+    display: none;
+    &.dragActive {
+      display: block;
+      color: @highlightBlue;
+    }
+  }
+}
+
+.tabsToolbar {
+  background: @tabsBackground;
+  display: flex;
+  height: 26px;
+}
+
+.tabsToolbarButtons {
+  background: @tabsBackground;
+  padding-right: 5px;
+  .browserButton {
+    display: inline-block;
+    line-height: initial;
+  }
+}
+
+.tabPages {
+  background: @tabsBackground;
+  border-top: 1px solid gray;
+  display: flex;
+  height: 14px;
+  justify-content: center;
+  position: relative;
+  text-align: center;
+  z-index: 12;
+}
+
+.tabPage {
+  align-items: center;
+  background-color: @chromeControlsBackground2;
+  border-radius: 9px;
+  box-sizing: border-box;
+  display: inline-block;
+  margin: auto 2.5px;
+  height: 6px;
+  width: 34px;
+  vertical-align: middle;
+
+  &:hover {
+    background-color: lighten(@chromeControlsBackground2, 10%);
+  }
+
+  &.audioPlaybackActive {
+    border: 1px solid @audioColor;
+  }
+
+  &.active {
+    background-color: #eeeeee;
+  }
+}
+
+.prevTab, .nextTab {
+  color: #3B3B3B;
+  font-size: 24px !important;
+  height: 20px;
+  line-height: 20px !important;
+  opacity: 0.5;
+  vertical-align: top;
+  width: 50px;
+  &:not([disabled]) {
+    background: #eeeeee;
+    opacity: 1;
+    &:hover {
+      background: lighten(#eeeeee, 10%);
+    }
+  }
+}
+
+.prevTab {
+  background: linear-gradient(to right, @chromeControlsBackground2, @tabsBackground);
+  border-bottom-left-radius: 9px;
+  border-top-left-radius: 9px;
+  padding-left: 10px;
+  text-align: left;
+  transform: translateX(10px);
+}
+
+.nextTab {
+  background: linear-gradient(to left, #afb0b4, #cccccc);
+  border-bottom-right-radius: 9px;
+  border-top-right-radius: 9px;
+  float: right;
+  padding-right: 10px;
+  text-align: right;
+  transform: translateX(-20px);
+}
+
+.pinnedTabs {
+  margin-left: 9px;
+}
