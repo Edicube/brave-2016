@@ -316,6 +316,19 @@ ipcMain.on(messages.APP_ACTION, (event, action) => {
   if (!action || typeof action !== 'object' || typeof action.actionType !== 'string') {
     return
   }
+  // A flood of oversized payloads is just as good as a malicious one for
+  // wedging the main process, so bound what a single dispatch may carry.
+  let json
+  try {
+    json = JSON.stringify(action)
+  } catch (e) {
+    return
+  }
+  if (!json || json.length > 2 * 1024 * 1024) {
+    console.error('[appStore] refused an oversized action:',
+      json ? json.length : 'unserializable')
+    return
+  }
   try {
     handleAppAction(Serializer.deserialize(action))
   } catch (err) {

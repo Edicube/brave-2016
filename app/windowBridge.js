@@ -119,8 +119,11 @@ module.exports.init = () => {
     if (!isAppWindow(event.sender) || !allowedChannels.has(channel)) {
       return
     }
+    if (!Array.isArray(args) || args.length > 10) {
+      return
+    }
     debug('sendToSelf', channel)
-    event.sender.send(channel, ...(Array.isArray(args) ? args : []))
+    event.sender.send(channel, ...args)
   })
 
   ipcMain.on('bridge-download-url', (event, url) => {

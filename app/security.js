@@ -155,6 +155,18 @@ module.exports.initEarly = () => {
       if (params.partition !== Partitions.private) {
         params.partition = Partitions.web
       }
+      // And the src must be a scheme a page may visit at all. The session
+      // would refuse file: anyway, but refusing the attach is cheaper and
+      // keeps every later guard out of the picture entirely.
+      let srcScheme = null
+      try {
+        srcScheme = new url.URL(params.src).protocol
+      } catch (e) {}
+      if (srcScheme && !webviewSchemes.has(srcScheme)) {
+        debug('refused webview attach for', params.src)
+        e.preventDefault()
+        return
+      }
       debug('attaching webview for', params.src)
     })
 
