@@ -61,7 +61,8 @@ async function main () {
   })
 
   for (const dir of paths) {
-    const binary = path.join(dir, 'Brave')
+    // electron-packager names the executable after the app name
+    const binary = path.join(dir, 'Brave 2016')
     if (!fs.existsSync(binary)) {
       console.error(`packaged binary not found at ${binary}`)
       continue
