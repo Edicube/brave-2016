@@ -68,7 +68,9 @@ function registerPermissionHandlers (ses) {
   // everything else is rejected with -2, and there is no code path that can
   // turn an error into an accept.
   ses.setCertificateVerifyProc((request, callback) => {
-    if (request.verificationResult !== 'OK' || !request.isIssuedByKnownRoot) {
+    // Electron reports a passing verification as 'net::OK' (the net error
+    // code string), not plain 'OK'.
+    if (request.verificationResult !== 'net::OK' || !request.isIssuedByKnownRoot) {
       debug(`refusing certificate for ${request.hostname}:`,
         request.verificationResult || `errorCode ${request.errorCode}`)
       callback(-2)
