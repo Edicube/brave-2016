@@ -1,10 +1,11 @@
 # Brave 2016
 
-Un browser desktop bazat pe Electron, construit peste codul Brave 2016 (MPL-2.0), modernizat și întărit pentru Electron 43: UI-ul original, securitate la nivel 2026.
+A desktop browser built on the 2016 Brave codebase (MPL-2.0), updated to run
+on Electron 43. Original UI, modern security posture.
 
-## Rulare
+## Running it
 
-Cerințe: Node.js (LTS) și npm.
+You need Node.js (LTS) and npm.
 
 ```bash
 git clone https://github.com/Edicube/brave-2016.git
@@ -13,29 +14,34 @@ npm ci
 npm start
 ```
 
-`npm ci` face totul singur: instalează dependențele exact din lockfile, descarcă binarul Electron dacă lipsește și aplică automat fuses-urile de securitate pe el (`harden` + `verify-fuses`, fail-closed).
+`npm ci` handles everything: installs dependencies from the lockfile, downloads
+the Electron binary if it's missing, and hardens that binary with Electron
+fuses automatically (fail-closed verification).
 
-## Scripturi utile
+## Scripts
 
-| Comandă | Ce face |
+| Command | What it does |
 |---|---|
-| `npm start` | build + pornește browserul |
-| `npm test` | testele unitare |
-| `npm run lint` | verificare stil |
-| `npm run harden` | aplică fuses-urile pe binarul Electron |
-| `npm run verify-fuses` | confirmă fuses-urile (rulează automat după install) |
-| `npm run package` | produce binarul packaged |
+| `npm start` | build and launch the browser |
+| `npm test` | unit tests |
+| `npm run lint` | style checks |
+| `npm run harden` | flip Electron fuses on the binary |
+| `npm run verify-fuses` | check the fuses (runs automatically after install) |
+| `npm run package` | produce a packaged binary |
 
-## Note de securitate
+## Security notes
 
-- UI-ul e servit peste `brave://ui`, nu `file://`; scheme-ul `file:` e refuzat la nivel de sesiune.
-- Toate handler-ele IPC validează expeditorul și argumentele.
-- Fuses: `RUN_AS_NODE`, `NODE_OPTIONS`, node inspector dezactivate; cookie encryption activă. Verificate automat la fiecare instalare.
-- Certificate TLS: respingere explicită a oricărei erori; niciun bypass.
-- DevTools dezactivate în afara modului debug (`BRAVE_DEBUG=1`).
+- The UI is served over `brave://ui`, never `file://`; the `file:` scheme is
+  refused at the session level.
+- Every IPC handler validates its sender and arguments.
+- Fuses: `RUN_AS_NODE`, `NODE_OPTIONS` and the node inspector are off; cookie
+  encryption is on. Verified on every install.
+- TLS errors are always refused; there is no bypass and no client certs.
+- DevTools are closed unless you set `BRAVE_DEBUG=1`.
 
-Pentru un release semnat: umple câmpurile `_signing_intent` din `builderConfig.json` cu datele certificatului tău.
+To ship a signed release, fill in the `_signing_intent` fields in
+`builderConfig.json` with your certificate details.
 
-## Licență
+## License
 
-Codul original Brave 2016: MPL-2.0. Vezi `LICENSE.txt`.
+The original 2016 code is MPL-2.0. See `LICENSE.txt`.
