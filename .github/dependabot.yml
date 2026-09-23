@@ -7,6 +7,15 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # React 18 and later removed ReactDOM.render, string refs and
+      # findDOMNode, which the 2016 components are built on: moving there is
+      # a rewrite of the UI, not an update. Minor and patch releases still
+      # come through.
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-dom'
+        update-types: ['version-update:semver-major']
     groups:
       electron:
         patterns: ['electron']
