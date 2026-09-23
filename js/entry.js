@@ -41,5 +41,12 @@ ipc.on(messages.REQUEST_WINDOW_STATE, () => {
   ipc.send(messages.RESPONSE_WINDOW_STATE, WindowStore.getState().toJS())
 })
 
+// for Reopen Last Closed Window; ignored by the main process when quitting
+window.addEventListener('beforeunload', () => {
+  try {
+    ipc.send(messages.CLOSED_WINDOW_STATE, WindowStore.getState().toJS())
+  } catch (e) {}
+})
+
 createRoot(document.getElementById('windowContainer')).render(
   <Window appState={appState} frames={frames} />)

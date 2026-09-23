@@ -326,28 +326,55 @@ DNS-over-HTTPS template comes from a fixed list in
 [js/constants/dnsProviders.js](../js/constants/dnsProviders.js), so a
 compromised renderer cannot point name resolution at a server of its choosing.
 
+**Continuing past a phishing warning takes a one-time token.** The warning
+page has no bridge to the main process. When it is shown, the main process
+hands it a random 128-bit token for that one tab; the button puts the token in
+the page's own fragment, and the main process continues only if the token
+matches an offer made to that same tab. A forged or reused token is ignored
+(an e2e check tries one). The site is then allowed until Brave closes. There is
+still no way past a certificate error.
+
+**Bookmark import reads an untrusted file.** The file is chosen in the main
+process's own dialog, so a window can ask for an import but never name a file.
+Only `http:` and `https:` addresses are taken, at most 5,000, from a file of at
+most 20 MB; titles are plain text.
+
+**Downloads are never opened from the browser.** The downloads panel can show a
+finished file in its folder, but not open it: opening a downloaded file would
+run it.
+
+**Permission decisions and downloads are never saved.** They live in app state
+so the windows can show them, but the session file drops them, and a window
+cannot set them: only the main process modules that own them can.
+
+**A writable install is pointed out.** On Linux, Electron does not check
+`app.asar` against the binary. A JavaScript hash check would live inside the
+archive it checks, so instead the browser warns once when its own files are
+writable by the user running it, which is the case that lets malware modify it.
+
 ## What is still weak
 
 - **Updates depend on the pipeline staying green.** Electron patch and minor
-  updates from Dependabot now merge themselves once every CI check passes on
-  all four platforms, and a daily job releases them; installed Linux copies then
-  update themselves. A new Electron major, or a red CI, still waits for a
-  person. This is the largest remaining risk, because it is the only one that
-  grows on its own. `npm run doctor` reports whether the
-  Electron major is still supported, whether the fuses survived, and what npm
-  audit says.
+  updates from Dependabot now merge themselves once every CI check passes on all
+  four platforms, and a daily job releases them; installed Linux copies then
+  update themselves. A new Electron major (a weekly job opens an issue for it),
+  or a red CI, still waits for a person. This is the largest remaining risk,
+  because it is the only one that grows on its own. `npm run doctor` reports
+  whether the Electron major is still supported, whether the fuses survived, and
+  what npm audit says.
 - **ASAR integrity is not verified on Linux.** `npm run package` produces an
   ASAR build with `OnlyLoadAppFromAsar`, but Electron only verifies embedded
-  ASAR integrity on macOS and Windows. Use the root-owned install above; run
-  from a checkout, anything running as your user can modify the browser.
+  ASAR integrity on macOS and Windows. Use the root-owned install above (the
+  browser warns when it is not); run from a checkout, anything running as your
+  user can modify the browser.
 - **Cosmetic filtering is styles only.** The lists also carry scriptlets, which
   would mean running code in every page; they are not injected, so some ads
   that are built by script still show.
 - **No "proceed anyway" on bad certificates.** The warning page explains what
   went wrong, but there is deliberately no way past it.
 - **The blocklists are third-party.** Phishing and ad blocking are only as good
-  as the lists. The warning page shows the rule that matched, but a false
-  positive has no in-browser bypass.
+  as the lists. The warning page shows the rule that matched, and a false
+  positive can be passed for the session - which a user can also be talked into.
 
 ## Re-running the checks
 

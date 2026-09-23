@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// History, bookmarks and settings, shown inside the browser window rather than
+// History, bookmarks, downloads and settings, shown inside the browser window rather than
 // as pages in a tab: a page in a tab is web content, and these need the app
 // state, so keeping them here adds no privileged origin a web page could reach.
 
@@ -97,9 +97,9 @@ class SitesPanel extends React.Component {
             value={this.state.query}
             onChange={(e) => this.setState({ query: e.target.value })}
           />
-          {!bookmarks
-            ? <button onClick={() => AppActions.clearHistory()}>Clear history</button>
-            : null}
+          {bookmarks
+            ? <button onClick={() => AppActions.importBookmarks()}>Import...</button>
+            : <button onClick={() => AppActions.clearHistory()}>Clear history</button>}
         </div>
         <ul className='siteList'>
           {entries.size === 0
@@ -121,6 +121,73 @@ class SitesPanel extends React.Component {
 }
 
 SitesPanel.propTypes = { sites: PropTypes.object, mode: PropTypes.string }
+
+const sizeOf = (bytes) => {
+  if (!(bytes > 0)) {
+    return ''
+  }
+  const units = ['B', 'KB', 'MB', 'GB']
+  let i = 0
+  while (bytes >= 1024 && i < units.length - 1) {
+    bytes /= 1024
+    i++
+  }
+  return (i === 0 ? bytes : bytes.toFixed(1)) + ' ' + units[i]
+}
+
+const downloadStatus = (d) => {
+  switch (d.state) {
+    case 'completed': return sizeOf(d.total || d.received) || 'Done'
+    case 'cancelled': return 'Cancelled'
+    case 'interrupted': return 'Failed'
+    case 'paused': return 'Paused - ' + sizeOf(d.received)
+    default:
+      return d.total > 0
+        ? `${sizeOf(d.received)} of ${sizeOf(d.total)}`
+        : sizeOf(d.received) || 'Starting'
+  }
+}
+
+/**
+ * This session's downloads. A finished file can be shown in its folder but
+ * not opened from here: opening it would run it.
+ */
+class DownloadsPanel extends ImmutableComponent {
+  render () {
+    const downloads = (this.props.downloads || Immutable.List()).toJS().reverse()
+    const act = (id, action) => () => AppActions.downloadAction(id, action)
+    return (
+      <Panel title='Downloads'>
+        <ul className='siteList downloadList'>
+          {downloads.length === 0
+            ? <li className='empty'>No downloads this session.</li>
+            : downloads.map(d => {
+              const running = d.state === 'progressing' || d.state === 'paused'
+              return (
+                <li key={d.id} className={'download ' + d.state}>
+                  <a title={d.url} onClick={d.state === 'completed' ? act(d.id, 'show') : undefined}>
+                    <span className='siteTitle'>{d.filename}</span>
+                    <span className='siteLocation'>{downloadStatus(d)}</span>
+                    {d.state === 'progressing' && d.total > 0
+                      ? <progress max={d.total} value={d.received} />
+                      : null}
+                  </a>
+                  {d.state === 'completed' ? <button onClick={act(d.id, 'show')}>Show in folder</button> : null}
+                  {d.state === 'progressing' ? <button onClick={act(d.id, 'pause')}>Pause</button> : null}
+                  {d.state === 'paused' ? <button onClick={act(d.id, 'resume')}>Resume</button> : null}
+                  {running
+                    ? <button onClick={act(d.id, 'cancel')}>Cancel</button>
+                    : <button className='siteRemove' title='Remove from list' onClick={act(d.id, 'remove')}>×</button>}
+                </li>
+              )
+            })}
+        </ul>
+      </Panel>
+    )
+  }
+}
+
+DownloadsPanel.propTypes = { downloads: PropTypes.object }
 
 const protections = [
   ['adblock', 'Block ads'],
@@ -159,6 +226,27 @@ class SettingsPanel extends ImmutableComponent {
           <p className='settingNote'>
             Turn protections off for just one site from the lock icon in the address bar.
           </p>
+
+          <h2>Site permissions</h2>
+          {(() => {
+            const decisions = (this.props.appState.get('sitePermissions') || Immutable.List()).toJS()
+            return decisions.length === 0
+              ? <p className='settingNote'>No site has asked for the camera, microphone or notifications this session.</p>
+              : (
+                <ul className='permissionList'>
+                  {decisions.map(d =>
+                    <li key={d.origin + '|' + d.key}>
+                      <span className='permissionSite'>{d.origin.replace(/^https?:\/\//, '')}</span>
+                      <span className={d.allowed ? 'permissionAllowed' : 'permissionBlocked'}>
+                        {d.allowed ? 'May ' : 'May not '}{d.label}
+                      </span>
+                      <button onClick={() => AppActions.revokePermission(d.origin, d.key)}>Forget</button>
+                    </li>
+                  )}
+                </ul>
+                )
+          })()}
+          <p className='settingNote'>Decisions last until Brave closes. Forgetting one reloads the site, which asks again.</p>
 
           <h2>Secure DNS</h2>
           {Object.keys(dnsProviders).map(name =>
@@ -202,4 +290,4 @@ class SettingsPanel extends ImmutableComponent {
 
 SettingsPanel.propTypes = { appState: PropTypes.object }
 
-module.exports = { SitesPanel, SettingsPanel }
+module.exports = { SitesPanel, SettingsPanel, DownloadsPanel }

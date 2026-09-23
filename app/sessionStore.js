@@ -35,6 +35,10 @@ module.exports.saveAppState = (payload) => {
       })
     }
 
+    // Session-only: this session's permission decisions and downloads
+    delete payload.sitePermissions
+    delete payload.downloads
+
     // Always recalculate the update status
     if (payload.updates) {
       delete payload.updates.status

@@ -1,0 +1,50 @@
+# Weekly: opens an issue when a new Electron major is out. Dependabot proposes
+# it, but a major never merges by itself (dependabot-automerge.yml takes only
+# patch and minor), and Electron supports just the latest three majors, so
+# falling behind has a deadline.
+name: Electron major
+
+on:
+  schedule:
+    - cron: '23 8 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.repository == 'Edicube/brave-2016'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compare with the latest Electron
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          current="$(node -p "require('./package-lock.json').packages['node_modules/electron'].version")"
+          latest="$(npm view electron version)"
+          echo "using Electron $current, latest is $latest"
+          if [ "${latest%%.*}" -le "${current%%.*}" ]; then
+            exit 0
+          fi
+          title="Electron ${latest%%.*} is out (using ${current%%.*})"
+          if gh issue list -R "$REPO" --state open --search "in:title \"$title\"" --json number -q '.[].number' | grep -q .; then
+            echo "already reported"
+            exit 0
+          fi
+          gh issue create -R "$REPO" --title "$title" --body-file - <<BODY
+          Electron $latest is out; this browser uses $current.
+
+          Electron supports only the latest three majors, and a major never merges
+          by itself. To move over: merge the Dependabot pull request for it (or run
+          \`npm run update\`), check that CI is green on every platform, then tag a
+          release.
+          BODY

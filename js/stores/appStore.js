@@ -6,6 +6,7 @@
 
 'use strict'
 const AppConstants = require('../constants/appConstants')
+const Immutable = require('immutable')
 const SiteUtil = require('../state/siteUtil')
 const electron = require('electron')
 const ipcMain = electron.ipcMain
@@ -151,6 +152,39 @@ class AppStore {
     return appState
   }
 
+  /**
+   * Sets state that only the main process owns and that is never saved to
+   * the session file (see app/sessionStore.js): the permission decisions and
+   * the download list. Not an action, so no window can set it.
+   */
+  setSessionOnly (key, value) {
+    appState = appState.set(key, Immutable.fromJS(value))
+    this.emitChange()
+  }
+
+  /**
+   * Adds bookmarks in one change, for an import.
+   * @param {Array<{location: string, title: string}>} bookmarks
+   * @return {number} how many were not bookmarked already
+   */
+  addBookmarks (bookmarks) {
+    const SiteTags = require('../constants/siteTags')
+    let sites = appState.get('sites')
+    let added = 0
+    bookmarks.forEach(({ location, title }) => {
+      const index = SiteUtil.getSiteUrlIndex(sites, location)
+      const tags = index === -1 ? null : sites.getIn([index, 'tags'])
+      if (tags && tags.includes(SiteTags.BOOKMARK)) {
+        return
+      }
+      sites = SiteUtil.addSite(sites, Immutable.fromJS({ location, title }), SiteTags.BOOKMARK)
+      added++
+    })
+    appState = appState.set('sites', sites)
+    this.emitChange()
+    return added
+  }
+
   emitChange () {
     const stateJS = this.getState().toJS()
     BrowserWindow.getAllWindows().forEach(wnd =>
@@ -215,15 +249,16 @@ function applyTheme (theme) {
 // Reloads the tabs showing a site once its protections changed. Done here,
 // after the state is set, so the reload cannot race ahead of the change, and
 // past the cache: a cached ad served on reload would never reach the filters.
-function reloadTabsOn (host) {
+function reloadTabsWhere (test) {
   electron.webContents.getAllWebContents().forEach(wc => {
     try {
-      if (wc.getType() === 'webview' && new URL(wc.getURL()).hostname === host) {
+      if (wc.getType() === 'webview' && test(new URL(wc.getURL()))) {
         wc.reloadIgnoringCache()
       }
     } catch (e) {}
   })
 }
+const reloadTabsOn = (host) => reloadTabsWhere(u => u.hostname === host)
 
 const handleAppAction = (action) => {
   switch (action.actionType) {
@@ -315,6 +350,20 @@ const handleAppAction = (action) => {
         : appState.deleteIn(['siteSettings', action.host.toLowerCase()])
       appStore.emitChange()
       reloadTabsOn(action.host.toLowerCase())
+      break
+    case AppConstants.APP_REVOKE_PERMISSION:
+      if (typeof action.origin === 'string' && typeof action.key === 'string' &&
+          require('../../app/permissions').revoke(action.origin, action.key)) {
+        // a camera or microphone already handed over keeps running until the
+        // page goes away
+        reloadTabsWhere(u => u.origin === action.origin)
+      }
+      break
+    case AppConstants.APP_DOWNLOAD_ACTION:
+      require('../../app/downloads').act(action.id, action.action)
+      break
+    case AppConstants.APP_IMPORT_BOOKMARKS:
+      require('../../app/bookmarksImport').chooseAndImport()
       break
     case AppConstants.APP_SET_THEME:
       if (!['system', 'light', 'dark'].includes(action.theme)) {

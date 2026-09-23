@@ -494,14 +494,15 @@ function refuseFileScheme (ses) {
  * @param {string} blockedTarget the address that was refused
  * @param {string} reason one of the keys understood by app/blocked.js
  * @param {string=} detail extra text, e.g. a net error name
+ * @param {object=} extra more fields for app/blocked.js, e.g. a proceed token
  * @return {string}
  */
-module.exports.blockedPageUrl = (blockedTarget, reason, detail) =>
-  UiProtocol.url('blocked.html') + '#' + encodeURIComponent(JSON.stringify({
+module.exports.blockedPageUrl = (blockedTarget, reason, detail, extra) =>
+  UiProtocol.url('blocked.html') + '#' + encodeURIComponent(JSON.stringify(Object.assign({}, extra, {
     url: blockedTarget,
     reason: reason || 'unknown',
     detail
-  }))
+  })))
 
 module.exports.init = () => {
   ;[Partitions.web, Partitions.private].forEach((partition) =>

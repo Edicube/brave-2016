@@ -41,6 +41,38 @@ const askable = new Set(['media', 'notifications'])
 const decisions = new Map()
 // origin + '|' + what -> callbacks waiting on a prompt already on screen
 const pending = new Map()
+// what.key -> what.label, for showing decisions in Settings
+const labels = new Map()
+
+// The decisions, for the list in Settings. Held in app state but never saved.
+function publish () {
+  const list = []
+  for (const [key, allowed] of decisions) {
+    const split = key.lastIndexOf('|')
+    const what = key.slice(split + 1)
+    list.push({ origin: key.slice(0, split), key: what, label: labels.get(what) || what, allowed })
+  }
+  try {
+    require('../js/stores/appStore').setSessionOnly('sitePermissions', list)
+  } catch (e) {
+    debug('could not publish decisions:', e.message)
+  }
+}
+
+/**
+ * Forgets one decision, so the site is asked again next time.
+ * @param {string} origin
+ * @param {string} key
+ * @return {boolean} whether there was such a decision
+ */
+module.exports.revoke = (origin, key) => {
+  const had = decisions.delete(origin + '|' + key)
+  if (had) {
+    debug(`forgot ${key} for ${origin}`)
+    publish()
+  }
+  return had
+}
 
 const originOf = (target) => {
   try {
@@ -126,6 +158,8 @@ function ask (webContents, origin, what, done) {
   const shown = parent ? dialog.showMessageBox(parent, options) : dialog.showMessageBox(options)
   shown.then(({ response }) => response === 1, () => false).then((allowed) => {
     decisions.set(key, allowed)
+    labels.set(what.key, what.label)
+    publish()
     debug(`${allowed ? 'allowed' : 'blocked'} ${what.key} for ${origin}`)
     const waiting = pending.get(key) || []
     pending.delete(key)

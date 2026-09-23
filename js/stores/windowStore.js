@@ -410,7 +410,7 @@ const doAction = (action) => {
       break
     case WindowConstants.WINDOW_SET_PANEL:
       windowState = windowState.setIn(['ui', 'panel'],
-        ['history', 'bookmarks', 'settings'].includes(action.panel) ? action.panel : null)
+        ['history', 'bookmarks', 'settings', 'downloads'].includes(action.panel) ? action.panel : null)
       windowStore.emitChange()
       break
     case WindowConstants.WINDOW_SET_SITE_INFO_VISIBLE:

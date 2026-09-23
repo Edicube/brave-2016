@@ -33,6 +33,10 @@ Module._load = function (request) {
 }
 const Downloads = require('../../app/downloads')
 Module._load = originalLoad
+const lists = []
+Downloads.publishTo = (list) => lists.push(list)
+const shown = []
+fakeElectron.shell.showItemInFolder = (file) => shown.push(file)
 
 function fakeItem (total) {
   const item = new EventEmitter()
@@ -42,6 +46,13 @@ function fakeItem (total) {
   item.getTotalBytes = () => total
   item.getSavePath = () => '/tmp/file.zip'
   item.getFilename = () => 'file.zip'
+  item.getURL = () => 'https://example.com/file.zip'
+  item.getStartTime = () => 1
+  item.paused = false
+  item.isPaused = () => item.paused
+  item.pause = () => { item.paused = true }
+  item.canResume = () => item.paused
+  item.resume = () => { item.paused = false }
   item.cancel = () => { item.cancelled = true; item.emit('done', {}, 'cancelled') }
   return item
 }
@@ -75,4 +86,34 @@ test('cancel downloads cancels everything in flight', () => {
   Downloads.cancelAll()
   assert.ok(a.cancelled && b.cancelled)
   assert.strictEqual(Downloads.activeCount(), 0)
+})
+
+test('the downloads list: pause, resume, show and remove', () => {
+  const a = fakeItem(100)
+  Downloads.track(a)
+  const last = () => lists[lists.length - 1]
+  const id = last()[last().length - 1].id
+  const entry = () => last().find(d => d.id === id)
+  assert.strictEqual(entry().state, 'progressing')
+
+  Downloads.act(id, 'show')
+  assert.strictEqual(shown.length, 0, 'an unfinished file is not shown')
+  Downloads.act(id, 'remove')
+  assert.ok(last().some(d => d.id === id), 'a running download stays listed')
+
+  Downloads.act(id, 'pause')
+  assert.strictEqual(entry().state, 'paused')
+  Downloads.act(id, 'resume')
+  assert.strictEqual(entry().state, 'progressing')
+
+  a.received = 100
+  a.emit('done', {}, 'completed')
+  assert.strictEqual(entry().state, 'completed')
+  Downloads.act(id, 'show')
+  assert.deepStrictEqual(shown, ['/tmp/file.zip'])
+
+  Downloads.act(id, 'remove')
+  assert.ok(!last().some(d => d.id === id))
+  Downloads.act(999999, 'cancel')
+  Downloads.act(id, 'open')
 })

@@ -452,7 +452,12 @@ const init = (args) => {
           }
         }, {
           label: 'Reopen Last Closed Window',
-          enabled: false
+          click: () => {
+            const state = require('./closedWindows').pop()
+            if (state) {
+              AppActions.newWindow(undefined, undefined, state)
+            }
+          }
         }, {
           type: 'separator'
         }, {
@@ -550,8 +555,8 @@ const init = (args) => {
           type: 'separator'
         }, {
           label: 'Downloads',
-          accelerator: 'Shift+CmdOrCtrl+J',
-          enabled: false
+          accelerator: isDarwin ? 'Shift+CmdOrCtrl+J' : 'CmdOrCtrl+J',
+          click: showPanel('downloads')
         }, {
           label: 'History',
           click: showPanel('history')

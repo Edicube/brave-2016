@@ -4,10 +4,11 @@
 
 'use strict'
 
-// A minimal download UI, for a browser that never had one: progress on the
-// window's taskbar/dock icon, a notification when a download finishes or
-// fails, and File > Cancel downloads. Everything else about a download - the
-// confirmation and choosing where it goes - happens in app/security.js.
+// A download UI, for a browser that never had one: progress on the window's
+// taskbar/dock icon, a notification when a download finishes or fails, File >
+// Cancel downloads, and the list behind Window > Downloads. Everything else
+// about a download - the confirmation and choosing where it goes - happens in
+// app/security.js.
 
 const electron = require('electron')
 const BrowserWindow = electron.BrowserWindow
@@ -18,6 +19,13 @@ const path = require('path')
 
 const active = new Set()
 let lastPaint = 0
+
+// The list in the downloads panel: this session's downloads, newest last.
+// Kept in app state for the windows to show, never saved.
+const maxListed = 50
+const listed = new Map() // id -> { item, record }
+let nextId = 1
+let publishTimer = null
 
 const debug = (...args) => {
   if (process.env.BRAVE_DEBUG) {
@@ -63,6 +71,79 @@ function paintProgress (force) {
   BrowserWindow.getAllWindows().forEach(w => w.setProgressBar(progress))
 }
 
+function recordOf (item, state) {
+  const file = item.getSavePath()
+  return {
+    filename: path.basename(file || item.getFilename()),
+    url: item.getURL().slice(0, 2048),
+    state: state || (item.isPaused() ? 'paused' : 'progressing'),
+    received: item.getReceivedBytes(),
+    total: item.getTotalBytes(),
+    started: item.getStartTime() * 1000
+  }
+}
+
+function publishNow () {
+  clearTimeout(publishTimer)
+  publishTimer = null
+  const list = []
+  for (const [id, entry] of listed) {
+    if (active.has(entry.item)) {
+      entry.record = recordOf(entry.item)
+    }
+    list.push(Object.assign({ id }, entry.record))
+  }
+  try {
+    module.exports.publishTo(list)
+  } catch (e) {
+    debug('could not publish the list:', e.message)
+  }
+}
+
+// replaced in tests
+module.exports.publishTo = (list) =>
+  require('../js/stores/appStore').setSessionOnly('downloads', list)
+
+// Every state change goes to every window, so progress is sent at most
+// twice a second
+function publish (now) {
+  if (now) {
+    publishNow()
+  } else if (!publishTimer) {
+    publishTimer = setTimeout(publishNow, 500)
+  }
+}
+
+/**
+ * What the downloads panel can ask for. The id comes from a window, so it is
+ * only ever looked up, and a file is only ever shown in its folder, never
+ * opened: opening a downloaded file would run it.
+ * @param {number} id
+ * @param {string} action cancel, pause, resume, show or remove
+ */
+module.exports.act = (id, action) => {
+  const entry = listed.get(id)
+  if (!entry) {
+    return
+  }
+  const item = entry.item
+  const running = active.has(item)
+  if (action === 'cancel' && running) {
+    item.cancel()
+  } else if (action === 'pause' && running && !item.isPaused()) {
+    item.pause()
+  } else if (action === 'resume' && running && item.canResume()) {
+    item.resume()
+  } else if (action === 'show' && entry.record.state === 'completed') {
+    shell.showItemInFolder(item.getSavePath())
+  } else if (action === 'remove' && !running) {
+    listed.delete(id)
+  } else {
+    return
+  }
+  publish(true)
+}
+
 function notify (title, body, file) {
   if (!Notification.isSupported()) {
     return
@@ -80,14 +161,34 @@ function notify (title, body, file) {
  */
 module.exports.track = (item) => {
   active.add(item)
+  const id = nextId++
+  listed.set(id, { item, record: recordOf(item) })
+  // oldest finished ones make room
+  for (const [oldId, entry] of listed) {
+    if (listed.size <= maxListed) {
+      break
+    }
+    if (!active.has(entry.item)) {
+      listed.delete(oldId)
+    }
+  }
   refreshMenu()
   paintProgress(true)
+  publish(true)
 
-  item.on('updated', () => paintProgress(false))
+  item.on('updated', () => {
+    paintProgress(false)
+    publish(false)
+  })
   item.once('done', (event, state) => {
     active.delete(item)
+    const entry = listed.get(id)
+    if (entry) {
+      entry.record = recordOf(item, state)
+    }
     refreshMenu()
     paintProgress(true)
+    publish(true)
     const file = item.getSavePath()
     const name = path.basename(file || item.getFilename())
     debug(state, name)

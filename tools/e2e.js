@@ -241,6 +241,13 @@ async function functional () {
     return open && closed
   })
 
+  await check('the downloads panel opens', async () => {
+    await shortcut('show-panel', 'downloads')
+    const open = await waitFor(async () => (await ui("!!document.querySelector('.downloadList')")) === true, 5000)
+    await ui("document.querySelector('.panelClose').click(), 1")
+    return open
+  })
+
   await check('opening and closing a tab', async () => {
     const before = await webviews()
     await shortcut('shortcut-new-frame', page)
@@ -363,6 +370,20 @@ async function run () {
       (await web("(document.querySelector('h1') || {}).textContent")) === 'This site was blocked', 8000)
     // and it says which rule matched
     return shown && /matched rule:/.test(await web("document.getElementById('why').textContent"))
+  })
+
+  await check('continuing past a phishing warning takes its one-time token', async () => {
+    const onWarning = async () => /^brave:\/\/ui\/blocked\.html/.test((await tabUrl()) || '')
+    if (!(await onWarning())) return 'skip'
+    // a made-up token is ignored
+    await web(`window.location.hash = encodeURIComponent(JSON.stringify({ go: '${'0'.repeat(32)}' })), 1`)
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    const forgedIgnored = await onWarning()
+    await web("document.getElementById('proceed').click(), 1")
+    const went = await waitFor(async () => /^https:\/\/0\.gravatar\.com\//.test((await tabUrl()) || ''), 8000)
+    await navigate(page)
+    await waitFor(async () => (await tabUrl()) === page, 8000)
+    return forgedIgnored && went
   })
 
   if (network) {

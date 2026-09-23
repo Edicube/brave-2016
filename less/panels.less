@@ -171,6 +171,53 @@
   }
 }
 
+.downloadList {
+  li button {
+    flex: 0 0 auto;
+  }
+
+  li.cancelled .siteTitle, li.interrupted .siteTitle {
+    text-decoration: line-through;
+    color: var(--panel-muted);
+  }
+
+  progress {
+    height: 4px;
+    margin-top: 3px;
+    width: 100%;
+  }
+}
+
+.permissionList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    padding: 3px 0;
+  }
+
+  .permissionSite {
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .permissionAllowed, .permissionBlocked {
+    color: var(--panel-muted);
+    flex: 1;
+  }
+
+  button {
+    padding: 2px 8px;
+  }
+}
+
 .siteInfo li.shields {
   label {
     align-items: center;
@@ -194,6 +241,10 @@
     --panel-border: #444;
     --panel-hover: #37373b;
     --panel-input: #1f1f22;
+  }
+
+  .panel {
+    color-scheme: dark;
   }
 
   html, #window, body {

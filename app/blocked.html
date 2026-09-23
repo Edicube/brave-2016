@@ -39,6 +39,15 @@
         color: #fff;
         cursor: pointer;
       }
+      button.proceed {
+        display: block;
+        margin-top: 2.4em;
+        padding: 0;
+        background: none;
+        color: #6b6b6b;
+        font-size: .88em;
+        text-decoration: underline;
+      }
     </style>
   </head>
   <body>
@@ -48,6 +57,7 @@
       <code id="url">the address is not available</code>
       <p class="why" id="why"></p>
       <button id="action" hidden></button>
+      <button id="proceed" class="proceed" hidden></button>
     </main>
     <script src="blocked.js"></script>
   </body>

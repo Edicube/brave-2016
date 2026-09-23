@@ -163,6 +163,40 @@ const AppActions = {
   /**
    * @param {string} theme - 'system', 'light' or 'dark'
    */
+  /**
+   * Forgets a permission decision made this session
+   * @param {string} origin
+   * @param {string} key as in app/permissions.js, e.g. 'notifications'
+   */
+  revokePermission: function (origin, key) {
+    AppDispatcher.dispatch({
+      actionType: AppConstants.APP_REVOKE_PERMISSION,
+      origin,
+      key
+    })
+  },
+
+  /**
+   * @param {number} id a download's id from the downloads list
+   * @param {string} action cancel, pause, resume, show or remove
+   */
+  downloadAction: function (id, action) {
+    AppDispatcher.dispatch({
+      actionType: AppConstants.APP_DOWNLOAD_ACTION,
+      id,
+      action
+    })
+  },
+
+  /**
+   * Asks for a bookmarks file exported from another browser and imports it
+   */
+  importBookmarks: function () {
+    AppDispatcher.dispatch({
+      actionType: AppConstants.APP_IMPORT_BOOKMARKS
+    })
+  },
+
   setTheme: function (theme) {
     AppDispatcher.dispatch({
       actionType: AppConstants.APP_SET_THEME,

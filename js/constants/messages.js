@@ -67,7 +67,10 @@ const messages = {
   // was removed in Electron 22
   NEW_WINDOW_REQUESTED: _,
   // main to window: open a panel ('history', 'bookmarks', 'settings')
-  SHOW_PANEL: _
+  SHOW_PANEL: _,
+  // window to main: the state of a window being closed, for Reopen Last
+  // Closed Window
+  CLOSED_WINDOW_STATE: _
 }
 
 module.exports = mapValuesByKeys(messages)

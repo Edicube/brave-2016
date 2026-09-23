@@ -70,7 +70,8 @@ To open a page directly: `npm start -- https://example.com`
 - **Blocks ads and trackers** (EasyList, EasyPrivacy, uBlock Origin lists), both
   the requests and the empty ad boxes left behind.
 - **Blocks phishing and malware sites** with a warning page, in place of the Safe
-  Browsing service Electron does not have.
+  Browsing service Electron does not have. If the list is wrong about a site,
+  the page lets you continue to it until Brave closes.
 - **HTTPS first**: `http://` addresses are tried over HTTPS, falling back only
   when a site genuinely has no TLS.
 - **Drops third-party cookies** and trims cross-site referrers to the origin,
@@ -83,9 +84,9 @@ To open a page directly: `npm start -- https://example.com`
   download.
 - **Asks before a site gets the camera, microphone or notifications**, for this
   session only; everything else (location, USB, MIDI, screen capture...) is
-  refused outright.
-- **Shows download progress** on the taskbar, notifies when a download finishes,
-  and can cancel them from File > Cancel downloads.
+  refused outright. Settings lists every decision, and can forget one.
+- **Downloads panel** (Ctrl+J): progress, pause, resume, cancel, and show in
+  folder. Progress also shows on the taskbar.
 - **Updates itself on Linux** (the copy installed in `/opt`): when a newer
   release exists it offers to install it, checks the release's signature and
   checksum, and asks for your password. Elsewhere it tells you about it.
@@ -97,7 +98,9 @@ To open a page directly: `npm start -- https://example.com`
 - **History, bookmarks and settings**: History > Show All History (Ctrl+Y),
   Bookmarks > Manage Bookmarks (Ctrl+Alt+B), and Settings (Ctrl+, or the Brave
   button) for the protections, DNS provider and theme. History keeps the last
-  1,000 pages and never records private tabs.
+  1,000 pages and never records private tabs. Bookmarks can be imported from
+  the bookmarks file any browser exports. Closed tabs (Ctrl+Shift+T, up to 100)
+  and closed windows (History menu) can be reopened.
 - **Dark theme**, following the system or set in Settings.
 - **Optional, in Settings or the Bravery menu**: HTTPS-only (never fall back to
   plain HTTP), and clearing cookies and site data when Brave closes.

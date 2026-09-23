@@ -19,7 +19,7 @@ const TabPages = require('./tabPages')
 const TabsToolbar = require('./tabsToolbar')
 const Button = require('./button')
 const SiteInfo = require('./siteInfo')
-const { SitesPanel, SettingsPanel } = require('./panels')
+const { SitesPanel, SettingsPanel, DownloadsPanel } = require('./panels')
 
 // Constants
 const Config = require('../constants/config')
@@ -182,6 +182,9 @@ class Main extends ImmutableComponent {
             : null}
           {this.props.windowState.getIn(['ui', 'panel']) === 'settings'
             ? <SettingsPanel appState={this.props.appState} />
+            : null}
+          {this.props.windowState.getIn(['ui', 'panel']) === 'downloads'
+            ? <DownloadsPanel downloads={this.props.appState.get('downloads')} />
             : null}
           {this.props.windowState.getIn(['ui', 'siteInfo', 'isVisible'])
             ? <SiteInfo

@@ -37,6 +37,7 @@ const SiteHacks = require('./siteHacks')
 const Phishing = require('./phishing')
 const HttpsUpgrade = require('./httpsUpgrade')
 const Staleness = require('./staleness')
+const InstallCheck = require('./installCheck')
 const UpdateCheck = require('./updateCheck')
 const ClearOnExit = require('./clearOnExit')
 const CmdLine = require('./cmdLine')
@@ -109,6 +110,7 @@ const loadAppStatePromise = SessionStore.loadAppState().catch(() => {
 // Used to collect the per window state when shutting down the application
 const perWindowState = []
 let sessionStateStoreAttempted = false
+let quitting = false
 
 const saveIfAllCollected = () => {
   if (perWindowState.length === BrowserWindow.getAllWindows().length) {
@@ -186,6 +188,7 @@ app.on('ready', function () {
   })
 
   app.on('before-quit', function (e) {
+    quitting = true
     if (sessionStateStoreAttempted || BrowserWindow.getAllWindows().length === 0) {
       saveIfAllCollected()
       return
@@ -193,6 +196,20 @@ app.on('ready', function () {
 
     e.preventDefault()
     BrowserWindow.getAllWindows().forEach(win => win.webContents.send(messages.REQUEST_WINDOW_STATE))
+  })
+
+  // a window closed by itself, not by quitting: remembered for Reopen Last
+  // Closed Window, under the same bounds as the state saved on quit
+  ipcMain.on(messages.CLOSED_WINDOW_STATE, (e, data) => {
+    if (quitting || !senderIsAppWindow(e) || !data || typeof data !== 'object' ||
+        Array.isArray(data) || Object.keys(data).length > 50) {
+      return
+    }
+    try {
+      if (JSON.stringify(data).length <= 512 * 1024) {
+        require('./closedWindows').push(data)
+      }
+    } catch (err) {}
   })
 
   ipcMain.on(messages.RESPONSE_WINDOW_STATE, (wnd, data) => {
@@ -286,6 +303,7 @@ app.on('ready', function () {
     Phishing.init()
     HttpsUpgrade.init()
     Staleness.init()
+    InstallCheck.init()
     UpdateCheck.init()
     ClearOnExit.init()
     WindowOpen.init()
