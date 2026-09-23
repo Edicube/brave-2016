@@ -10,7 +10,7 @@
 > cannot afford to lose. Use a maintained browser for those.
 
 A desktop browser built on the 2016 Brave codebase (MPL-2.0), updated to run on
-Electron 43. Original UI, modern security posture - as far as a project like
+Electron 44. Original UI, modern security posture - as far as a project like
 this can have one. See [What "not safe" means](#what-not-safe-means).
 
 ## Running it
