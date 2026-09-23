@@ -14,7 +14,7 @@ require('../less/updateBar.less')
 require('../node_modules/font-awesome/css/font-awesome.css')
 
 const React = require('react')
-const ReactDOM = require('react-dom')
+const { createRoot } = require('react-dom/client')
 const Window = require('./components/window')
 const ipc = require('./lib/bridge').ipc
 const WindowStore = require('./stores/windowStore')
@@ -38,6 +38,5 @@ ipc.on(messages.REQUEST_WINDOW_STATE, () => {
   ipc.send(messages.RESPONSE_WINDOW_STATE, WindowStore.getState().toJS())
 })
 
-ReactDOM.render(
-  <Window appState={appState} frames={frames} />,
-  document.getElementById('windowContainer'))
+createRoot(document.getElementById('windowContainer')).render(
+  <Window appState={appState} frames={frames} />)

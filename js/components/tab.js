@@ -2,10 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* eslint-disable react/no-find-dom-node, react/no-string-refs -- 2016 React idioms, kept rather than rewriting working components */
-
 const React = require('react')
-const ReactDOM = require('react-dom')
 
 const ImmutableComponent = require('./immutableComponent')
 
@@ -60,7 +57,7 @@ class Tab extends ImmutableComponent {
       return
     }
 
-    const rect = ReactDOM.findDOMNode(this.refs.tab).getBoundingClientRect()
+    const rect = this.tabNode.getBoundingClientRect()
     if (e.clientX > rect.left && e.clientX < rect.left + rect.width / 2 &&
       !this.props.frameProps.get('tabIsDraggingOverLeftHalf')) {
       WindowActions.tabDragDraggingOverLeftHalf(this.props.frameProps)
@@ -191,7 +188,7 @@ class Tab extends ImmutableComponent {
           this.props.frameProps.get('tabIsDraggingOverRightHalf')
           })}
           data-frame-key={this.props.frameProps.get('key')}
-          ref='tab'
+          ref={(node) => { this.tabNode = node }}
           draggable='true'
           title={this.props.frameProps.get('title')}
           onMouseEnter={this.onMouseEnter.bind(this)}

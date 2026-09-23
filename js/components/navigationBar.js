@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* eslint-disable react/no-string-refs -- 2016 React idioms, kept rather than rewriting working components */
-
 const React = require('react')
 const ImmutableComponent = require('./immutableComponent')
 
@@ -78,7 +76,7 @@ class NavigationBar extends ImmutableComponent {
     return (
       <div
         id='navigator'
-        ref='navigator'
+        ref={(node) => { this.navigator = node }}
         data-frame-key={frameProps.get('key')}
         className={cx({
           loading: this.loading,
@@ -99,7 +97,7 @@ class NavigationBar extends ImmutableComponent {
           />
         </div>
         <UrlBar
-          ref='urlBar'
+          ref={(node) => { this.urlBar = node }}
           sites={this.props.sites}
           activeFrameProps={frameProps}
           searchDetail={this.props.searchDetail}

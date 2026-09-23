@@ -2,12 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* eslint-disable react/no-find-dom-node, react/no-string-refs, react/jsx-handler-names, no-case-declarations -- 2016 React idioms, kept rather than rewriting working components; the 2016 stores declare per-case locals throughout; a switch in braces per case is a larger rewrite */
+/* eslint-disable react/jsx-handler-names, no-case-declarations -- 2016 React idioms; the 2016 stores declare per-case locals throughout; a switch in braces per case is a larger rewrite */
 
 import { isUrl } from '../lib/appUrlUtil.js'
 
 const React = require('react')
-const ReactDOM = require('react-dom')
 
 const protocolOf = (target) => {
   try {
@@ -47,7 +46,7 @@ class UrlBar extends ImmutableComponent {
   }
 
   updateDOMInputFocus (focused) {
-    const urlInput = ReactDOM.findDOMNode(this.refs.urlInput)
+    const urlInput = this.urlInput
     if (focused) {
       urlInput.focus()
     } else {
@@ -57,7 +56,7 @@ class UrlBar extends ImmutableComponent {
 
   updateDOMInputSelected (selected) {
     if (selected) {
-      const urlInput = ReactDOM.findDOMNode(this.refs.urlInput)
+      const urlInput = this.urlInput
       urlInput.select()
     }
   }
@@ -74,7 +73,7 @@ class UrlBar extends ImmutableComponent {
 
   // Whether the suggestions box is visible
   get suggestionsShown () {
-    return this.refs.urlBarSuggestions.shouldRender()
+    return this.urlBarSuggestions.shouldRender()
   }
 
   onKeyDown (e) {
@@ -86,10 +85,10 @@ class UrlBar extends ImmutableComponent {
           this.restore()
           WindowActions.setUrlBarSelected(true)
         } else {
-          const selectedIndex = this.refs.urlBarSuggestions.activeIndex
+          const selectedIndex = this.urlBarSuggestions.activeIndex
           if (this.suggestionsShown && selectedIndex > 0) {
             // load the selected suggestion
-            this.refs.urlBarSuggestions.clickSelected()
+            this.urlBarSuggestions.clickSelected()
           } else if (!isUrl(location)) {
             // do search.
             const searchUrl = this.searchDetail && this.searchDetail.get('searchURL')
@@ -106,13 +105,13 @@ class UrlBar extends ImmutableComponent {
         break
       case KeyCodes.UP:
         if (this.suggestionsShown) {
-          this.refs.urlBarSuggestions.previousSuggestion()
+          this.urlBarSuggestions.previousSuggestion()
           e.preventDefault()
         }
         break
       case KeyCodes.DOWN:
         if (this.suggestionsShown) {
-          this.refs.urlBarSuggestions.nextSuggestion()
+          this.urlBarSuggestions.nextSuggestion()
           e.preventDefault()
         }
         break
@@ -157,7 +156,7 @@ class UrlBar extends ImmutableComponent {
     WindowActions.setUrlBarActive(false)
   }
 
-  componentWillMount () {
+  UNSAFE_componentWillMount () { // eslint-disable-line camelcase
     ipc.on(messages.SHORTCUT_FOCUS_URL, (e, forSearchMode) => {
       WindowActions.setUrlBarSelected(true, forSearchMode)
     })
@@ -219,7 +218,7 @@ class UrlBar extends ImmutableComponent {
       <form
         action='#'
         id='urlbar'
-        ref='urlbar'
+        ref={(node) => { this.urlbar = node }}
       >
         <span
           onClick={this.onSiteInfo}
@@ -249,13 +248,13 @@ class UrlBar extends ImmutableComponent {
           })}
           id='urlInput'
           readOnly={this.props.titleMode}
-          ref='urlInput'
+          ref={(node) => { this.urlInput = node }}
         />
         {!this.props.titleMode
           ? <span className='loadTime'>{this.loadTime}</span>
           : null}
         <UrlBarSuggestions
-          ref='urlBarSuggestions'
+          ref={(node) => { this.urlBarSuggestions = node }}
           suggestions={this.props.urlbar.get('suggestions')}
           sites={this.props.sites}
           frames={this.props.frames}

@@ -2,11 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* eslint-disable react/no-find-dom-node, react/jsx-handler-names -- 2016 React idioms, kept rather than rewriting working components */
+/* eslint-disable react/jsx-handler-names -- 2016 React idioms */
 
 const React = require('react')
 const PropTypes = require('prop-types')
-const ReactDOM = require('react-dom')
 const ImmutableComponent = require('./immutableComponent')
 
 /**
@@ -18,7 +17,7 @@ export class DialogButton extends ImmutableComponent {
     if (this.props.returnValue === undefined &&
       typeof this.props.returnValueCallback === 'function') {
       clickHandler = () => this.props.onClick(
-        this.props.returnValueCallback(ReactDOM.findDOMNode(this).parentNode))
+        this.props.returnValueCallback(this.node.parentNode))
     }
     return clickHandler
   }
@@ -26,6 +25,7 @@ export class DialogButton extends ImmutableComponent {
   render () {
     return (
       <span
+        ref={(node) => { this.node = node }}
         className='dialogButton'
         onClick={this.clickHandler}
         data-l10n-id={this.props['data-l10n-id']}

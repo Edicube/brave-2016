@@ -151,10 +151,15 @@ async function functional () {
   })
 
   await check('back and forward', async () => {
-    await shortcut('shortcut-active-frame-back')
-    const back = await waitFor(async () => (await tabUrl()) === page, 8000)
-    await shortcut('shortcut-active-frame-forward')
-    const forward = await waitFor(async () => (await tabUrl()) === other, 8000)
+    // let the previous navigation finish committing before walking history
+    const settled = () => waitFor(async () => (await web('document.readyState')) === 'complete', 8000)
+    const go = async (channel, want) => {
+      await settled()
+      await shortcut(channel)
+      return waitFor(async () => (await tabUrl()) === want, 8000)
+    }
+    const back = await go('shortcut-active-frame-back', page)
+    const forward = await go('shortcut-active-frame-forward', other)
     return back && forward
   })
 
@@ -288,6 +293,27 @@ async function run () {
 }
 
 async function networkChecks () {
+  await check('[network] URL bar suggestions: arrow down and enter opens one', async () => {
+    await ui(`(function () {
+      var input = document.getElementById('urlInput')
+      input.focus()
+      var set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+      set.call(input, 'wikipedia')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      return 1 })()`)
+    const shown = await waitFor(async () =>
+      (await ui("document.querySelectorAll('.urlBarSuggestions li').length")) > 0, 5000)
+    // separate keystrokes, as a person makes them: React batches updates
+    // within one task, so Enter in the same tick would not yet see the selection
+    const key = (code, name) => ui(`document.getElementById('urlInput').dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, keyCode: ${code}, which: ${code}, key: '${name}' })), 1`)
+    await key(40, 'ArrowDown')
+    await waitFor(async () => (await ui("!!document.querySelector('.urlBarSuggestions li.selected')")) === true, 3000)
+    await key(13, 'Enter')
+    const went = await waitFor(async () => /wikipedia\.org/.test((await tabUrl()) || ''), 15000)
+    return shown && went
+  })
+
   await check('[network] cosmetic filters hide ad containers', async () => {
     // the engine has no cosmetic rules for bare IP hosts, so this needs a
     // real domain; the rule used is a generic one that applies on any site
@@ -356,8 +382,8 @@ async function main () {
     await sleep(1500)
     await run()
 
-    const uncaught = (log.match(/Uncaught|render process gone|preload error/g) || []).length
-    results.push({ name: 'no uncaught errors or crashed renderers', status: uncaught ? 'FAIL' : 'pass' })
+    const uncaught = (log.match(/Uncaught|render process gone|preload error|Warning: /g) || []).length
+    results.push({ name: 'no uncaught errors, React warnings or crashed renderers', status: uncaught ? 'FAIL' : 'pass' })
 
     for (const r of results) {
       console.log(`  ${r.status.padEnd(4)}  ${r.name}${r.why ? '  (' + r.why + ')' : ''}`)

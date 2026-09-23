@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* eslint-disable react/no-string-refs -- 2016 React idioms, kept rather than rewriting working components */
-
 const React = require('react')
 const ImmutableComponent = require('./immutableComponent')
 const Bridge = require('../lib/bridge')
@@ -33,6 +31,12 @@ const messages = require('../constants/messages')
 const FrameStateUtil = require('../state/frameStateUtil')
 
 class Main extends ImmutableComponent {
+  constructor (props) {
+    super(props)
+    // frame components by key, filled in by their refs
+    this.frames = {}
+  }
+
   componentDidMount () {
     ipc.on(messages.STOP_LOAD, () => {
       Bridge.sendToSelf(messages.SHORTCUT_ACTIVE_FRAME_STOP)
@@ -92,7 +96,7 @@ class Main extends ImmutableComponent {
   }
 
   get activeFrame () {
-    return this.refs[`frame${this.props.windowState.get('activeFrameKey')}`]
+    return this.frames[this.props.windowState.get('activeFrameKey')]
   }
 
   onBack () {
@@ -205,7 +209,7 @@ class Main extends ImmutableComponent {
             {
           sortedFrames.map(frame =>
             <Frame
-              ref={`frame${frame.get('key')}`}
+              ref={(node) => { if (node) { this.frames[frame.get('key')] = node } else { delete this.frames[frame.get('key')] } }}
               frames={this.props.windowState.get('frames')}
               frame={frame}
               key={frame.get('key')}

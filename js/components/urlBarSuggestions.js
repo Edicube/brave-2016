@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* eslint-disable react/no-find-dom-node, react/jsx-handler-names -- 2016 React idioms, kept rather than rewriting working components */
+/* eslint-disable react/jsx-handler-names -- 2016 React idioms */
 
 import Config from '../constants/config.js'
 import top500 from './../data/top500.js'
@@ -11,7 +11,6 @@ import Immutable from 'immutable'
 import debounce from '../lib/debounce.js'
 
 const React = require('react')
-const ReactDOM = require('react-dom')
 
 const WindowActions = require('../actions/windowActions')
 const ImmutableComponent = require('./immutableComponent')
@@ -58,7 +57,10 @@ class UrlBarSuggestions extends ImmutableComponent {
   }
 
   clickSelected () {
-    ReactDOM.findDOMNode(this).getElementsByClassName('selected')[0].click()
+    const selected = this.node && this.node.getElementsByClassName('selected')[0]
+    if (selected) {
+      selected.click()
+    }
   }
 
   // Whether the suggestions box should be rendered
@@ -80,7 +82,7 @@ class UrlBarSuggestions extends ImmutableComponent {
     window.addEventListener('click', this)
 
     return (
-      <ul className='urlBarSuggestions'>
+      <ul ref={(node) => { this.node = node }} className='urlBarSuggestions'>
         {suggestions.map((suggestion, index) =>
           <li
             data-index={index + 1}

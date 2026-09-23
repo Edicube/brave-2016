@@ -2,10 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* eslint-disable react/no-find-dom-node, react/no-string-refs -- 2016 React idioms, kept rather than rewriting working components */
-
 const React = require('react')
-const ReactDOM = require('react-dom')
 const ImmutableComponent = require('./immutableComponent')
 const Immutable = require('immutable')
 const keyCodes = require('../constants/keyCodes')
@@ -48,7 +45,7 @@ export default class FindBar extends ImmutableComponent {
    * Focus the find in page input and select the text
    */
   focus () {
-    const input = ReactDOM.findDOMNode(this.refs.searchString)
+    const input = this.searchString
     input.focus()
     input.select()
   }
@@ -128,7 +125,7 @@ export default class FindBar extends ImmutableComponent {
         <span className='searchStringContainer'>
           <input
             type='text'
-            ref='searchString'
+            ref={(node) => { this.searchString = node }}
             onKeyDown={this.onKeyDown.bind(this)}
             onChange={this.onChange.bind(this)}
             value={this.props.findDetail.get('searchString')}

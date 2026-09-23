@@ -2,14 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* eslint-disable react/no-find-dom-node, react/no-string-refs, no-case-declarations -- 2016 React idioms, kept rather than rewriting working components; the 2016 stores declare per-case locals throughout; a switch in braces per case is a larger rewrite */
+/* eslint-disable no-case-declarations -- 2016 React idioms; the 2016 stores declare per-case locals throughout; a switch in braces per case is a larger rewrite */
 
 import adInfo from '../data/adInfo.js'
 import Config from '../constants/config.js'
 import FindBar from './findbar.js'
 
 const React = require('react')
-const ReactDOM = require('react-dom')
 const path = require('path')
 const WindowActions = require('../actions/windowActions')
 const AppActions = require('../actions/appActions')
@@ -37,7 +36,7 @@ class Frame extends ImmutableComponent {
   }
 
   get webviewContainer () {
-    return ReactDOM.findDOMNode(this.refs.webviewContainer)
+    return this.webviewContainerNode
   }
 
   updateWebview () {
@@ -303,7 +302,7 @@ class Frame extends ImmutableComponent {
     this.webview.stopFindInPage('clearSelection')
   }
 
-  componentWillReceiveProps (nextProps) {
+  UNSAFE_componentWillReceiveProps (nextProps) { // eslint-disable-line camelcase
     if (nextProps.frame.get('audioMuted') &&
       this.props.frame.get('audioMuted') !== true) {
       this.webview.setAudioMuted(true)
@@ -323,7 +322,7 @@ class Frame extends ImmutableComponent {
         })}
       >
         <FindBar
-          ref='findbar'
+          ref={(node) => { this.findbar = node }}
           findInPageDetail={null}
           onFindAll={this.onFindAll.bind(this)}
           onFindAgain={this.onFindAgain.bind(this)}
@@ -333,7 +332,7 @@ class Frame extends ImmutableComponent {
           findDetail={this.props.frame.get('findDetail')}
         />
         <div
-          ref='webviewContainer'
+          ref={(node) => { this.webviewContainerNode = node }}
           className={cx({
             webviewContainer: true,
             isPreview: this.props.isPreview
