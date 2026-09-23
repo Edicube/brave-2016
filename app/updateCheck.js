@@ -62,8 +62,12 @@ function checkedRecently (interval) {
   }
 }
 
-async function check (config) {
-  if (checkedRecently(config.msBetweenChecks)) {
+// manual: asked for from the menu - no daily limit, and it says what it found
+async function check (config, manual) {
+  const tell = (message, detail) => manual && ask({
+    type: 'info', buttons: ['OK'], title: 'Check for updates', message, detail
+  })
+  if (!manual && checkedRecently(config.msBetweenChecks)) {
     debug('checked recently, skipping')
     return
   }
@@ -81,11 +85,13 @@ async function check (config) {
     })
     if (!res.ok) {
       debug('release lookup got HTTP', res.status)
+      await tell('Could not check for updates.', `GitHub answered with HTTP ${res.status}.`)
       return
     }
     release = await res.json()
   } catch (e) {
     debug('release lookup failed:', e.message)
+    await tell('Could not check for updates.', e.message)
     return
   } finally {
     clearTimeout(timer)
@@ -95,6 +101,7 @@ async function check (config) {
   const latest = release && typeof release.tag_name === 'string' && release.tag_name
   if (!latest || compareVersions(latest, current) <= 0) {
     debug(`up to date (${current}, latest ${latest})`)
+    await tell(`Brave 2016 ${current} is up to date.`)
     return
   }
 
@@ -190,6 +197,17 @@ module.exports.init = () => {
   setTimeout(() => {
     check(config).catch((e) => debug('update check failed:', e.message))
   }, config.delayMs).unref()
+}
+
+/**
+ * File > Check for updates: checks right away and always reports back.
+ */
+module.exports.checkNow = () => {
+  const config = AppConfig.updateCheck
+  if (!config) {
+    return
+  }
+  check(config, true).catch((e) => debug('update check failed:', e.message))
 }
 
 module.exports.compareVersionsForTest = compareVersions

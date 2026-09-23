@@ -17,9 +17,12 @@ const path = require('path')
 const { binaryIn, outDir } = require('./package')
 
 const root = path.join(__dirname, '..')
-const arch = process.arch
+// --arch=x64 to start an Intel build on an Apple Silicon Mac (via Rosetta)
+const archFlag = process.argv.find(a => a.startsWith('--arch='))
+const arch = archFlag ? archFlag.slice('--arch='.length) : process.arch
 const dist = path.join(root, 'dist', outDir(`${process.platform}-${arch}`))
-let binary = process.argv[2] || binaryIn(dist)
+const explicit = process.argv.slice(2).find(a => !a.startsWith('--'))
+let binary = explicit || binaryIn(dist)
 if (process.platform === 'darwin' && binary.endsWith('.app')) {
   binary = path.join(binary, 'Contents', 'MacOS', 'Brave 2016')
 }

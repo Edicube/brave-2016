@@ -275,23 +275,6 @@ const handleAppAction = (action) => {
       appState = appState.setIn([action.resourceName, 'etag'], action.etag)
       appStore.emitChange()
       break
-    case AppConstants.APP_UPDATE_LAST_CHECK:
-      appState = appState.setIn(['updates', 'lastCheckTimestamp'], (new Date()).getTime())
-      appStore.emitChange()
-      break
-    case AppConstants.APP_SET_UPDATE_STATUS:
-      if (action.status !== undefined) {
-        appState = appState.setIn(['updates', 'status'], action.status)
-      }
-      // Auto reset back to false because it'll be set to true on each new check
-      if (action.verbose !== undefined) {
-        appState = appState.setIn(['updates', 'verbose'], action.verbose)
-      }
-      if (action.metadata !== undefined) {
-        appState = appState.setIn(['updates', 'metadata'], action.metadata)
-      }
-      appStore.emitChange()
-      break
     case AppConstants.APP_SET_RESOURCE_ENABLED:
       appState = appState.setIn([action.resourceName, 'enabled'], action.enabled)
       appStore.emitChange()

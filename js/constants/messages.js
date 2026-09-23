@@ -44,11 +44,8 @@ const messages = {
   // The hamburger button in the tabs toolbar asks for the application menu
   SHOW_MAIN_MENU: _,
   // Updates
-  UPDATE_REQUESTED: _,
   UPDATE_AVAILABLE: _,
   UPDATE_NOT_AVAILABLE: _,
-  CHECK_FOR_UPDATE: _,
-  UPDATE_META_DATA_RETRIEVED: _,
   // App state
   APP_INITIALIZED: _,
   // Webview page messages

@@ -23,6 +23,8 @@ jobs:
             platform: win32-x64
           - os: macos-latest
             platform: darwin-arm64
+          - os: macos-latest
+            platform: darwin-x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -47,7 +49,11 @@ jobs:
 
       - run: npm ci
       - run: npm test
-      - run: npm run package
+      - name: Package
+        shell: bash
+        run: npm run package -- --arch="${PLATFORM#*-}"
+        env:
+          PLATFORM: ${{ matrix.platform }}
 
       - name: Fuses on the packaged build
         shell: bash
@@ -65,7 +71,10 @@ jobs:
           xvfb-run -a node tools/smoke.js /tmp/smoke-build/brave-2016
       - name: Starts (macOS, Windows)
         if: runner.os != 'Linux'
-        run: node tools/smoke.js
+        shell: bash
+        run: node tools/smoke.js --arch="${PLATFORM#*-}"
+        env:
+          PLATFORM: ${{ matrix.platform }}
 
       - name: Archive
         shell: bash
@@ -142,6 +151,7 @@ jobs:
           | Linux x64 | \`brave-2016-${TAG}-linux-x64.tar.gz\` |
           | Windows x64 | \`brave-2016-${TAG}-win32-x64.zip\` |
           | macOS (Apple Silicon) | \`brave-2016-${TAG}-darwin-arm64.zip\` |
+          | macOS (Intel) | \`brave-2016-${TAG}-darwin-x64.zip\` |
 
           Verify before running:
 

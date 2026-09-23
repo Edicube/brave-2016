@@ -23,6 +23,7 @@ Download from [Releases](https://github.com/Edicube/brave-2016/releases):
 | Linux x64 | `brave-2016-<version>-linux-x64.tar.gz` |
 | Windows x64 | `brave-2016-<version>-win32-x64.zip` |
 | macOS (Apple Silicon) | `brave-2016-<version>-darwin-arm64.zip` |
+| macOS (Intel) | `brave-2016-<version>-darwin-x64.zip` |
 
 Check it before running it:
 
@@ -98,6 +99,7 @@ To open a page directly: `npm start -- https://example.com`
 | `npm start` | build and launch the browser |
 | `npm test` | unit tests |
 | `npm run e2e` | launch the real browser and check its security properties (`-- --network` for the online checks) |
+| `npm run update` | update a source checkout: pull, reinstall, re-harden, test, build |
 | `npm run doctor` | is Electron still supported, are the fuses set, any npm advisories |
 | `npm run lint` | style checks |
 | `npm run harden` / `verify-fuses` | flip / check the Electron fuses |

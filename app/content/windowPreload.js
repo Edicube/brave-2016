@@ -94,11 +94,6 @@ contextBridge.exposeInMainWorld('braveBridge', {
     ipcRenderer.send('bridge-download-url', url)
   },
 
-  // stands in for remote.shell.openItem(userData/updateLog.log)
-  openUpdateLog () {
-    ipcRenderer.send('bridge-open-update-log')
-  },
-
   /**
    * Shows a context menu. The template must already be free of functions: the
    * renderer keeps its click handlers and is called back by item id.

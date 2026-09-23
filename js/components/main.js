@@ -17,10 +17,8 @@ const NavigationBar = require('./navigationBar')
 const Frame = require('./frame')
 const TabPages = require('./tabPages')
 const TabsToolbar = require('./tabsToolbar')
-const UpdateBar = require('./updateBar')
 const Button = require('./button')
 const SiteInfo = require('./siteInfo')
-const ReleaseNotes = require('./releaseNotes')
 
 // Constants
 const Config = require('../constants/config')
@@ -120,10 +118,6 @@ class Main extends ImmutableComponent {
     WindowActions.setSiteInfoVisible(false)
   }
 
-  onHideReleaseNotes () {
-    WindowActions.setReleaseNotesVisible(false)
-  }
-
   get enableAds () {
     let enabled = this.props.appState.getIn(['adblock', 'enabled'])
     if (enabled === undefined) {
@@ -175,12 +169,6 @@ class Main extends ImmutableComponent {
                 onHide={this.onHideSiteInfo.bind(this)}
               />
             : null}
-          {this.props.windowState.getIn(['ui', 'releaseNotes', 'isVisible'])
-            ? <ReleaseNotes
-                metadata={this.props.appState.getIn(['updates', 'metadata'])}
-                onHide={this.onHideReleaseNotes.bind(this)}
-              />
-            : null}
           <div className='topLevelEndButtons'>
             <Button
               iconClass='braveMenu'
@@ -199,7 +187,6 @@ class Main extends ImmutableComponent {
             key='tab-bar'
             activeFrame={activeFrame}
           />
-          <UpdateBar updates={this.props.appState.get('updates')} />
         </div>
         <div
           className='mainContainer'

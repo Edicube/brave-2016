@@ -26,16 +26,13 @@ const BrowserWindow = electron.BrowserWindow
 const ipcMain = electron.ipcMain
 const app = electron.app
 const Menu = require('./menu')
-const Updater = require('./updater')
 const messages = require('../js/constants/messages')
 const AppActions = require('../js/actions/appActions')
 const SessionStore = require('./sessionStore')
 const AppStore = require('../js/stores/appStore')
-const PackageLoader = require('./package-loader')
 const Filtering = require('./filtering')
 const TrackingProtection = require('./trackingProtection')
 const AdBlock = require('./adBlock')
-const HttpsEverywhere = require('./httpsEverywhere')
 const SiteHacks = require('./siteHacks')
 const Phishing = require('./phishing')
 const HttpsUpgrade = require('./httpsUpgrade')
@@ -282,9 +279,6 @@ app.on('ready', function () {
 
     Menu.init()
 
-    // Load HTTPS Everywhere browser "extension"
-    HttpsEverywhere.init()
-
     Filtering.init()
     TrackingProtection.init()
     AdBlock.init()
@@ -295,27 +289,5 @@ app.on('ready', function () {
     UpdateCheck.init()
     ClearOnExit.init()
     WindowOpen.init()
-
-    ipcMain.on(messages.UPDATE_REQUESTED, (e) => {
-      if (senderIsAppWindow(e)) {
-        Updater.update()
-      }
-    })
-
-    // This loads package.json into an object
-    PackageLoader.load((err, pack) => {
-      if (err) throw new Error('package.json could not be accessed')
-
-      // Setup the auto updater
-      Updater.init(process.platform, pack.version)
-
-      // This is fired by a menu entry (for now - will be scheduled)
-      process.on(messages.CHECK_FOR_UPDATE, () => Updater.checkForUpdate(true))
-
-      // This is fired from a auto-update metadata call
-      process.on(messages.UPDATE_META_DATA_RETRIEVED, (metadata) => {
-        console.log(metadata)
-      })
-    })
   })
 })

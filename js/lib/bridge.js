@@ -32,7 +32,6 @@ module.exports.getWindowId = () => bridge().windowId
 module.exports.getAppPath = () => bridge().appPath
 module.exports.sendToSelf = (channel, ...args) => bridge().sendToSelf(channel, ...args)
 module.exports.downloadURL = (url) => bridge().downloadURL(url)
-module.exports.openUpdateLog = () => bridge().openUpdateLog()
 
 /**
  * Enough of a BrowserWindow for the menu click handlers in js/contextMenus.js,

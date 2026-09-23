@@ -5,7 +5,6 @@
 'use strict'
 const AppDispatcher = require('../dispatcher/appDispatcher')
 const AppConstants = require('../constants/appConstants')
-const messages = require('../constants/messages')
 
 const AppActions = {
   /**
@@ -38,15 +37,6 @@ const AppActions = {
       actionType: AppConstants.APP_CLOSE_WINDOW,
       appWindowId
     })
-  },
-
-  /**
-   * Dispatches an event to the main process to update the browser
-   */
-  updateRequested: function () {
-    // TODO - change to dispatcher
-    console.log('appActions updateRequested')
-    require('../lib/bridge').ipc.send(messages.UPDATE_REQUESTED)
   },
 
   /**
@@ -125,31 +115,6 @@ const AppActions = {
       actionType: AppConstants.APP_SET_RESOURCE_ENABLED,
       resourceName,
       enabled
-    })
-  },
-
-  /**
-   * Sets the update.lastCheckTimestamp to the current
-   * epoch timestamp (milliseconds)
-   */
-  setUpdateLastCheck: function () {
-    AppDispatcher.dispatch({
-      actionType: AppConstants.APP_UPDATE_LAST_CHECK
-    })
-  },
-
-  /**
-   * Sets the update status
-   * @param {string} status - update status from js/constants/updateStatus.js.
-   * @param {boolean} verbose - Whether to show UI for all the update steps.
-   * @param {object} metadata - Metadata from the pdate server, with info like release notes.
-   */
-  setUpdateStatus: function (status, verbose, metadata) {
-    AppDispatcher.dispatch({
-      actionType: AppConstants.APP_SET_UPDATE_STATUS,
-      status,
-      verbose,
-      metadata
     })
   }
 }

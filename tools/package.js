@@ -25,6 +25,11 @@ const fs = require('fs')
 
 const root = path.join(__dirname, '..')
 const out = path.join(root, 'dist')
+
+const archArg = () => {
+  const flag = process.argv.find(a => a.startsWith('--arch='))
+  return flag ? flag.slice('--arch='.length) : process.arch
+}
 const appName = process.platform === 'linux' ? 'brave-2016' : 'Brave 2016'
 
 async function main () {
@@ -47,6 +52,8 @@ async function main () {
     executableName: appName,
     appVersion: require(path.join(root, 'package.json')).version,
     overwrite: true,
+    // --arch=x64 builds for Intel Macs from an Apple Silicon one, and so on
+    arch: archArg(),
     asar: true,
     prune: true,
     icon: path.join(root, 'res', { darwin: 'app.icns', win32: 'app.ico' }[process.platform] || 'app-icon-green.png'),

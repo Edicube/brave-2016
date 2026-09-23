@@ -102,7 +102,7 @@ list.
 | `appPath` | `remote.app.getAppPath()` |
 | `sendToSelf` | `remote.getCurrentWebContents().send()` |
 | `downloadURL` | `remote.getCurrentWebContents().downloadURL()` |
-| `openUpdateLog` | `remote.shell.openItem(...)` |
+| `initialState` | the window's starting state, once (it used to travel in the URL) |
 | `popupMenu` | `remote.Menu.buildFromTemplate(...).popup()` |
 
 Three things make it narrow rather than just indirect:

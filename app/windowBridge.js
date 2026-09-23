@@ -11,10 +11,8 @@
 const electron = require('electron')
 const app = electron.app
 const ipcMain = electron.ipcMain
-const shell = electron.shell
 const Menu = electron.Menu
 const BrowserWindow = electron.BrowserWindow
-const path = require('path')
 const messages = require('../js/constants/messages')
 const UiProtocol = require('./uiProtocol')
 const InitialState = require('./initialState')
@@ -162,13 +160,6 @@ module.exports.init = () => {
     }
     debug('downloadURL', url)
     event.sender.downloadURL(url)
-  })
-
-  ipcMain.on('bridge-open-update-log', (event) => {
-    if (!isAppWindow(event.sender)) {
-      return
-    }
-    shell.openPath(path.join(app.getPath('userData'), 'updateLog.log'))
   })
 
   // The hamburger button in the tabs toolbar. Pops the application menu at the

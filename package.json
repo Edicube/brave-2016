@@ -15,7 +15,8 @@
     "package": "npm run build && node ./tools/package.js",
     "doctor": "node ./tools/doctor.js",
     "e2e": "npm run build && node ./tools/e2e.js",
-    "verify-install": "sh ./tools/install-linux.sh --verify"
+    "verify-install": "sh ./tools/install-linux.sh --verify",
+    "update": "node ./tools/update.js"
   },
   "repository": "brave/browser-laptop",
   "author": {
