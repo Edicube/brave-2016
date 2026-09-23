@@ -5,31 +5,48 @@
 > **⚠️ This browser is not safe for everyday use.**
 >
 > It is a hobby revival of the January 2016 Brave codebase, not a maintained
-> browser. There is no auto-updater, so it only receives Chromium security
-> fixes when someone rebuilds it by hand; no security team reviews it; and
-> parts of it are 2016 code that was never written with today's threats in
-> mind. Do not use it for banking, email, work accounts or anything else you
+> browser. It gets Chromium security fixes only as fast as one person ships
+> them, no security team reviews it, and parts of it are 2016 code that was
+> never written with today's threats in mind. Do not use it for banking, email, work accounts or anything else you
 > cannot afford to lose. Use a maintained browser for those.
 
 A desktop browser built on the 2016 Brave codebase (MPL-2.0), updated to run on
-Electron 44. Original UI, modern security posture - as far as a project like
+a current Electron. Original UI, modern security posture - as far as a project like
 this can have one. See [What "not safe" means](#what-not-safe-means).
 
 ## Installing a release
 
-Download the latest archive from
-[Releases](https://github.com/Edicube/brave-2016/releases), then check it and
-install it root-owned, so nothing running as your user can modify it:
+Download from [Releases](https://github.com/Edicube/brave-2016/releases):
+
+| Platform | File |
+|---|---|
+| Linux x64 | `brave-2016-<version>-linux-x64.tar.gz` |
+| Windows x64 | `brave-2016-<version>-win32-x64.zip` |
+| macOS (Apple Silicon) | `brave-2016-<version>-darwin-arm64.zip` |
+
+Check it before running it:
 
 ```bash
-sha256sum -c SHA256SUMS.txt
-gh attestation verify brave-2016-*-linux-x64.tar.gz -R Edicube/brave-2016
-tar xzf brave-2016-*-linux-x64.tar.gz
-sudo sh "Brave 2016-linux-x64/install.sh"
+sha256sum -c --ignore-missing SHA256SUMS.txt
+gh attestation verify brave-2016-<version>-linux-x64.tar.gz -R Edicube/brave-2016
 ```
 
 `gh attestation verify` proves the archive was built by this repository's
 release workflow from a tagged commit, not by someone's laptop.
+
+**Linux**: install it root-owned, so nothing running as your user can modify
+it. This is also the copy that can update itself:
+
+```bash
+tar xzf brave-2016-<version>-linux-x64.tar.gz
+sudo sh "Brave 2016-linux-x64/install.sh"
+brave-2016
+```
+
+**macOS and Windows**: the builds are not code-signed, which needs paid Apple
+and Microsoft certificates, so the OS warns on first launch. On macOS
+right-click the app and choose Open; on Windows choose "More info", then "Run
+anyway". They tell you about new releases but do not install them.
 
 ## Running it from source
 
@@ -63,8 +80,16 @@ To open a page directly: `npm start -- https://example.com`
   refused outright.
 - **Shows download progress** on the taskbar, notifies when a download finishes,
   and can cancel them from File > Cancel downloads.
-- **Tells you when a newer release exists** - one request to GitHub, at most
-  daily. It does not download or install anything by itself.
+- **Updates itself on Linux** (the copy installed in `/opt`): when a newer
+  release exists it offers to install it, checks the release's signature and
+  checksum, and asks for your password. Elsewhere it tells you about it.
+- **Shows a page with a Reload button when a tab crashes**, instead of a blank
+  tab.
+- **Looks like an ordinary Chrome** to sites, instead of announcing itself as
+  "Brave2016 ... Electron", which singles you out and gets you refused by some
+  sign-in pages.
+- **Optional, in the Bravery menu**: HTTPS-only (never fall back to plain HTTP),
+  and clearing cookies and site data when Brave closes.
 
 ## Scripts
 
@@ -77,6 +102,7 @@ To open a page directly: `npm start -- https://example.com`
 | `npm run lint` | style checks |
 | `npm run harden` / `verify-fuses` | flip / check the Electron fuses |
 | `npm run package` | packaged build in `dist/` |
+| `node tools/smoke.js` | start the packaged build and check it shows its UI |
 | `sudo sh tools/install-linux.sh` | install the packaged build to `/opt/brave-2016`, root-owned |
 | `npm run verify-install` | check the installed files against their checksums |
 
@@ -84,20 +110,21 @@ To open a page directly: `npm start -- https://example.com`
 
 Concretely, and in order of how much it matters:
 
-1. **No automatic updates.** Nothing installs itself. Dependabot opens a pull
-   request when Electron (and with it Chromium) has a new release, CI tests it,
-   and a tagged release is built from it - but you still have to download and
-   install that release. Until you do, every Chromium vulnerability published
-   since your build stays open. The browser tells you when a newer release
-   exists, and warns once a build is 45 days old.
+1. **Updates depend on one person.** Dependabot proposes each new Electron (and
+   with it Chromium), CI tests it, and a release is built and signed from it -
+   but someone has to merge it and tag it. On Linux the installed browser then
+   updates itself once you agree; on macOS and Windows you download the new
+   release yourself. Until then, every Chromium vulnerability published since
+   your build stays open.
 2. **Small project, no review.** The security work here was done and tested by
    one person with an AI assistant. It has found and fixed several real holes
    along the way (see [docs/security.md](docs/security.md)); there are almost
    certainly more.
 3. **Stricter than a real browser in some places, weaker in others.** No
    "proceed anyway" for bad certificates, and corporate TLS inspection will not
-   work at all. On the other hand there is no Safe Browsing service, no site
-   isolation tuning, no sandboxed PDF viewer, and no fingerprinting protection.
+   work at all. On the other hand there is no Safe Browsing service, no
+   sandboxed PDF viewer, and only basic fingerprinting protection (an ordinary
+   User-Agent, but no canvas or font randomisation).
 4. **File integrity on Linux depends on how you install it.** Run from a
    checkout, anything running as your user can modify the browser. Installed to
    `/opt` with the script above, it cannot.

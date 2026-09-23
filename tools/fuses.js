@@ -19,9 +19,12 @@ const { flipFuses, FuseVersion, FuseV1Options } = require('@electron/fuses')
 const path = require('path')
 const fs = require('fs')
 
+// the installed Electron, whichever platform this is
+const defaultBinary = path.join(__dirname, '..', 'node_modules', 'electron', 'dist',
+  { darwin: 'Electron.app', win32: 'electron.exe' }[process.platform] || 'electron')
+
 const binary = process.argv.find((arg, i) =>
-  i > 1 && arg !== '--verify') ||
-  path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron')
+  i > 1 && arg !== '--verify') || defaultBinary
 
 const fuses = {
   // no using this binary as a node interpreter

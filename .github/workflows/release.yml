@@ -1,6 +1,7 @@
-# Pushing a tag like v0.8.0 builds the packaged Linux release, writes its
-# checksums, attests where it was built (verifiable with
-# `gh attestation verify <file> -R Edicube/brave-2016`), and publishes it.
+# Pushing a tag like v0.9.0 builds the release for Linux, Windows and macOS,
+# writes one checksum list for all of them, signs it for the self-updater,
+# attests where each archive was built (verifiable with
+# `gh attestation verify <file> -R Edicube/brave-2016`), and publishes.
 name: Release
 
 on:
@@ -11,13 +12,19 @@ permissions:
   contents: read
 
 jobs:
-  release:
-    runs-on: ubuntu-24.04
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x64
+          - os: windows-latest
+            platform: win32-x64
+          - os: macos-latest
+            platform: darwin-arm64
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    permissions:
-      contents: write      # create the release
-      id-token: write      # sign the provenance attestation
-      attestations: write  # store it
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -28,6 +35,7 @@ jobs:
           cache: npm
 
       - name: Tag matches package.json
+        shell: bash
         env:
           TAG: ${{ github.ref_name }}
         run: |
@@ -40,43 +48,108 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run package
-      - run: node tools/fuses.js --verify "dist/Brave 2016-linux-x64/Brave 2016"
 
-      - name: Archive and checksum
+      - name: Fuses on the packaged build
+        shell: bash
+        run: node tools/fuses.js --verify "$(node -p "require('./tools/package').binaryIn('dist/Brave 2016-${{ matrix.platform }}')")"
+
+      - name: Starts (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+          xvfb-run -a node tools/smoke.js
+      - name: Starts (macOS, Windows)
+        if: runner.os != 'Linux'
+        run: node tools/smoke.js
+
+      - name: Archive
+        shell: bash
         env:
           TAG: ${{ github.ref_name }}
+          PLATFORM: ${{ matrix.platform }}
         run: |
-          name="brave-2016-${TAG}-linux-x64.tar.gz"
-          # ship the installer inside, for people who only download the archive
-          cp tools/install-linux.sh "dist/Brave 2016-linux-x64/install.sh"
-          tar -C dist -czf "$name" "Brave 2016-linux-x64"
-          sha256sum "$name" > SHA256SUMS.txt
+          dir="Brave 2016-${PLATFORM}"
+          case "$PLATFORM" in
+            linux-*)
+              cp tools/install-linux.sh "dist/$dir/install.sh"
+              tar -C dist -czf "brave-2016-${TAG}-${PLATFORM}.tar.gz" "$dir" ;;
+            darwin-*)
+              # ditto keeps the framework symlinks a zip of the bundle needs
+              ditto -c -k --keepParent "dist/$dir/Brave 2016.app" "brave-2016-${TAG}-${PLATFORM}.zip" ;;
+            win32-*)
+              (cd dist && 7z a -tzip "../brave-2016-${TAG}-${PLATFORM}.zip" "$dir" > /dev/null) ;;
+          esac
+          ls -la brave-2016-*
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.platform }}
+          path: brave-2016-*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write      # create the release
+      id-token: write      # sign the provenance attestation
+      attestations: write  # store it
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: artifacts
+        run: |
+          sha256sum brave-2016-* > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+      - name: Sign the checksum list for the self-updater
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: node tools/sign-release.js artifacts/SHA256SUMS.txt
 
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: brave-2016-${{ github.ref_name }}-linux-x64.tar.gz
+          subject-path: artifacts/brave-2016-*
 
       - name: Publish
+        working-directory: artifacts
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
         run: |
-          gh release create "$TAG" \
-            "brave-2016-${TAG}-linux-x64.tar.gz" SHA256SUMS.txt \
+          gh release create "$TAG" -R "$REPO" brave-2016-* SHA256SUMS.txt SHA256SUMS.txt.sig \
             --title "Brave 2016 $TAG" \
             --notes-file - <<NOTES
-          Packaged Linux build of Brave 2016 $TAG.
-
           **Not safe for everyday use** - see the README for what that means.
 
-          Verify the download before running it:
+          | Platform | File |
+          |---|---|
+          | Linux x64 | \`brave-2016-${TAG}-linux-x64.tar.gz\` |
+          | Windows x64 | \`brave-2016-${TAG}-win32-x64.zip\` |
+          | macOS (Apple Silicon) | \`brave-2016-${TAG}-darwin-arm64.zip\` |
 
-              sha256sum -c SHA256SUMS.txt
-              gh attestation verify brave-2016-${TAG}-linux-x64.tar.gz -R ${{ github.repository }}
+          Verify before running:
 
-          Then install it root-owned so the browsing user cannot modify it:
+              sha256sum -c --ignore-missing SHA256SUMS.txt
+              gh attestation verify <file> -R ${REPO}
+
+          **Linux** - install root-owned, which also enables in-browser updates:
 
               tar xzf brave-2016-${TAG}-linux-x64.tar.gz
               sudo sh "Brave 2016-linux-x64/install.sh"
+
+          **macOS / Windows** - these builds are not code-signed (that needs paid
+          Apple and Windows certificates), so the OS will warn on first launch:
+          on macOS right-click the app and choose Open; on Windows choose
+          "More info" then "Run anyway". They do not update themselves.
           NOTES

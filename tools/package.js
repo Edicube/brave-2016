@@ -44,7 +44,7 @@ async function main () {
     overwrite: true,
     asar: true,
     prune: true,
-    icon: path.join(root, 'res', 'app-icon-green.png'),
+    icon: path.join(root, 'res', { darwin: 'app.icns', win32: 'app.ico' }[process.platform] || 'app-icon-green.png'),
     ignore: [
       /^\/dist($|\/)/,
       /^\/docs($|\/)/,
@@ -62,7 +62,7 @@ async function main () {
 
   for (const dir of paths) {
     // electron-packager names the executable after the app name
-    const binary = path.join(dir, 'Brave 2016')
+    const binary = module.exports.binaryIn(dir)
     if (!fs.existsSync(binary)) {
       console.error(`packaged binary not found at ${binary}`)
       continue
@@ -83,7 +83,9 @@ async function main () {
     })
 
     console.log('packaged and hardened:', dir)
-    const asar = path.join(dir, 'resources', 'app.asar')
+    const asar = process.platform === 'darwin'
+      ? path.join(binary, 'Contents', 'Resources', 'app.asar')
+      : path.join(dir, 'resources', 'app.asar')
     if (fs.existsSync(asar)) {
       console.log('  app.asar:', Math.round(fs.statSync(asar).size / 1024), 'KB')
     }
@@ -91,7 +93,18 @@ async function main () {
   }
 }
 
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+/**
+ * The packaged executable inside a packager output directory. On macOS this is
+ * the .app bundle, which is what flipFuses and `open` both take.
+ */
+module.exports.binaryIn = (dir) => path.join(dir, {
+  darwin: 'Brave 2016.app',
+  win32: 'Brave 2016.exe'
+}[process.platform] || 'Brave 2016')
+
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
+}

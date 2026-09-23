@@ -62,6 +62,7 @@ module.exports = {
   updateCheck: {
     // One request to the GitHub releases API, delayed and at most daily, to
     // say when a newer release exists. Nothing is downloaded or installed.
+    repo: 'Edicube/brave-2016',
     url: 'https://api.github.com/repos/Edicube/brave-2016/releases/latest',
     releasesPage: 'https://github.com/Edicube/brave-2016/releases',
     delayMs: 30 * 1000,

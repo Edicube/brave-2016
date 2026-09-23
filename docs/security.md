@@ -251,23 +251,67 @@ Everything else - location, USB, HID, serial, MIDI, screen capture, idle
 detection, opening external apps - is refused without a prompt
 ([app/permissions.js](../app/permissions.js)).
 
-**Updates are proposed, never applied.** Dependabot opens pull requests for new
-Electron and dependency versions, CI runs lint, unit tests and the end-to-end
-checks on every one, and a weekly run of `npm run doctor` fails the build when
-the Electron major falls out of support. Tagged releases are built by
-[.github/workflows/release.yml](../.github/workflows/release.yml) with a
-provenance attestation (`gh attestation verify`). The browser checks the latest
-release once a day and says so if it is newer. It never downloads or runs
-anything itself: an auto-installer would be a much larger attack surface than
-this project can look after.
+**Updates are proposed by Dependabot, tested by CI, and on Linux installed
+only when signed.** Dependabot opens pull requests for new Electron and
+dependency versions; CI runs lint, unit tests, fuzzing and the end-to-end
+checks on every one, builds and starts the packaged browser on Linux, macOS
+and Windows, and a weekly `npm run doctor` fails when the Electron major falls
+out of support. Tagged releases are built for all three platforms by
+[.github/workflows/release.yml](../.github/workflows/release.yml), with a
+provenance attestation.
+
+The copy installed root-owned in `/opt` can update itself
+([app/selfUpdate.js](../app/selfUpdate.js)). Nothing from a download runs
+until all of these hold:
+
+1. `SHA256SUMS.txt` carries a valid Ed25519 signature from the key in
+   [app/lib/releaseKey.js](../app/lib/releaseKey.js). Its private half exists
+   only as a secret of the GitHub repository, used by the release workflow;
+   the workflow also checks the signature against the shipped public key, so
+   a release signed with the wrong key fails there rather than in browsers.
+2. The archive's SHA-256 matches its line in that signed list, and its name
+   carries the release tag, so an old signed release cannot be replayed as a
+   new one. Assets must come from this repository's release URLs.
+3. The archive holds only plain files and directories, all inside its one
+   top-level directory: no links, no `..`, no absolute paths.
+
+Then the archive's own installer runs through `/usr/bin/pkexec /bin/sh`
+(absolute paths, so the caller's `PATH` plays no part), which asks for the
+admin password. `test/unit/selfUpdate.test.js` builds honest and tampered
+releases with a throwaway key and checks each refusal. What it cannot defend
+against: something already running as your user could swap the extracted
+files between verification and the password prompt - but such a thing could
+equally show a password prompt of its own. macOS and Windows builds are not
+code-signed and do not update themselves.
 
 **Workflow actions are pinned to commit SHAs**, not tags, so a compromised
 action repository cannot change what runs in CI or signs releases.
 
+**The browser looks like any Chrome.** Electron's default User-Agent names
+the app and Electron - "Brave2016/0.8.0 ... Electron/44.4.5" - which picks this
+browser out of millions and gets it refused by sites that block embedded
+browsers. It now sends the reduced User-Agent of an ordinary Chrome of the
+same version, on the wire and in `navigator.userAgent`. Canvas and font
+fingerprinting are not randomised: that needs a script in the main world of
+every page, which is a larger attack surface than the privacy is worth here.
+
+**Web pages cannot reach brave://.** The warning page is loaded into a tab by
+the main process; a page navigating itself or a frame to `brave://` is
+refused, and in web sessions the `brave://ui` handler serves only the warning
+page's two files, never the UI.
+
+**Fuzzed, not just unit tested.** `test/unit/fuzz.test.js` throws seeded
+random input at every function that takes something a page or a compromised
+renderer controls - the `brave://ui` resolver, the `window.open` allowlist,
+menu templates, permission decisions, session restore, version comparison -
+and checks what must always hold. 3,000 inputs per property on every CI run,
+200,000 weekly with a fresh seed. It found a crash in the version comparison.
+
 ## What is still weak
 
-- **Installing updates is still manual.** Releases are built and announced,
-  but nothing installs them. This is the largest remaining risk, because
+- **Updates are only as fast as one maintainer.** On Linux the installed
+  browser updates itself once a release exists, but someone has to merge the
+  Dependabot pull request and tag it. This is the largest remaining risk, because
   it is the only one that grows on its own. `npm run doctor` reports whether the
   Electron major is still supported, whether the fuses survived, and what npm
   audit says.
