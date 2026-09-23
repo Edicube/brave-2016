@@ -59,7 +59,7 @@ module.exports.dominantColor = (img) => {
       bucket.g += g
       bucket.b += b
     } else {
-      buckets.set(key, {count: 1, r, g, b})
+      buckets.set(key, { count: 1, r, g, b })
     }
   }
 

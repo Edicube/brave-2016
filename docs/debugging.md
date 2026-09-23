@@ -1,39 +1,40 @@
-#Debugging
+# Debugging
 
-## Debugging the Render processes
+## Logging
 
-Most of the time you'll be debugging the render process and this can be done with the built in developer tools.
-To open the dev tools use `Command+Alt+J` on OS X or `Control+Alt+J` on Windows.
+    BRAVE_DEBUG=1 npm start
 
-If you've ever used the built in Chrome developer tools you'll be right at home with a DOM inspector, Network monitor, Sources debugging, Timeline, Resources, Audits, and Console.
+mirrors every window's and every page's console into the terminal, along with
+preload errors, crashed renderers, and the decisions the main process makes:
+`[security]`, `[bridge]`, `[phishing]`, `[https]`, `[windowOpen]`,
+`[staleness]`, and each blocked request.
 
-The code which runs in render processes is inside of the `js` directory.
+## Renderers
 
-Calls to `console.log` and related functions go into the dev tools console mentioned above.
+Developer tools stay closed unless `BRAVE_DEBUG=1` is set. With it set, open
+them for a page with the usual shortcut, or connect from outside:
 
-If you're running `npm run watch`, then webpack dev server will ensure that changes to source code will reload the app.
+    ./node_modules/.bin/electron . --remote-debugging-port=9333
 
-## Debugging the Main process
+then open `http://127.0.0.1:9333/json/list`. The `page` target is the Brave UI
+(`brave://ui/index.html`); each `webview` target is a tab. `tools/e2e.js` drives
+the browser this way.
 
-The main process can be debugged with remote developer tools.
+`npm run watch` rebuilds the renderer bundle on every change, in development
+mode with source maps.
 
-When you run the `npm start` command it will start listening on port `5858`.
-One easy way to start debugging is to `Attach` to the process using [Visual Studio Code](https://code.visualstudio.com/) which works for OS X, Windows, and Linux.
+## Main process
 
-The left hand side of Visual Studio Code has a Debug button.  It allows you to attach the debugging, inspect variables, have a watch window, call stacks, line by line debugging, etc.
+The node inspector is switched off by an Electron fuse (`--inspect` is
+ignored), because otherwise anything on the machine could attach to the main
+process. To debug it, reset the fuses, debug, and flip them back:
 
-To pause the application before any code runs you can use `npm run start-brk`.
+    rm -rf node_modules/electron/dist && node node_modules/electron/install.js
+    ./node_modules/.bin/electron --inspect=5858 .
+    npm run harden          # put the fuses back afterwards
 
-The code which runs in the main process is inside of the `app` directory.
+## A throwaway profile
 
-Calls to `console.log` and related functions go into the terminal you did `npm start` from.
+    BRAVE_PROFILE_DIR=$(mktemp -d) npm start
 
-Unlike with the renderer process, since the main process isn't using webpack dev server, you will need to manually restart the app to see your changes.
-
-## Debugging Content
-
-Content is the web page which is loaded.  You can open the loaded content dev tools using `Command+Shift+I` on OS X or `Control+Shift+I` on Windows.
-
-If you'd like to see code run on each page load, you can edit `app/content/webviewPreload.js`.
-
-Calls to `console.log` and related functions go into the per page dev tools console mentioned above.
+runs on an empty profile, alongside a browser that is already open.

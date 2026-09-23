@@ -18,7 +18,7 @@ const fallback = Immutable.fromJS({
  */
 export function loadOpenSearch (path) {
   return new Promise(resolve => {
-    let xhr = new window.XMLHttpRequest()
+    const xhr = new window.XMLHttpRequest()
     const giveUp = (why) => {
       console.warn(`could not load the search description (${why}), using the default`)
       resolve(fallback)
@@ -37,8 +37,8 @@ export function loadOpenSearch (path) {
         giveUp('HTTP ' + xhr.status)
         return
       }
-      let parser = new window.DOMParser()
-      let doc = parser.parseFromString(xhr.responseText, 'text/xml')
+      const parser = new window.DOMParser()
+      const doc = parser.parseFromString(xhr.responseText, 'text/xml')
       window.doc = doc
       let searchURL
       let autocompleteURL

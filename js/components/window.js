@@ -47,7 +47,7 @@ class Window extends React.Component {
     WindowStore.addChangeListener(this.onChange.bind(this))
   }
 
-  componentWillMount () {
+  UNSAFE_componentWillMount () { // eslint-disable-line camelcase
     if (this.props.frames.length === 0) {
       WindowActions.newFrame({
         location: Config.defaultUrl
@@ -62,10 +62,14 @@ class Window extends React.Component {
   }
 
   render () {
-    return <div id='windowContainer'>
-      <Main windowState={this.state.immutableData.windowState}
-        appState={this.state.immutableData.appState} />
-    </div>
+    return (
+      <div id='windowContainer'>
+        <Main
+          windowState={this.state.immutableData.windowState}
+          appState={this.state.immutableData.appState}
+        />
+      </div>
+    )
   }
 
   componentWillUnmount () {

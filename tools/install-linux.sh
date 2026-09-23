@@ -13,14 +13,20 @@
 # and run them, so nothing running as that user can swap the code out.
 #
 #   sudo sh tools/install-linux.sh           install to /opt/brave-2016
+#   sudo sh install.sh                        the same, from a release archive
 #   sh tools/install-linux.sh --verify       check an installed copy
 #   PREFIX=/some/where sh tools/install-linux.sh   install elsewhere (tests)
 
 set -eu
 
 PREFIX="${PREFIX:-/opt/brave-2016}"
-HERE="$(cd "$(dirname "$0")/.." && pwd)"
-BUILD="$HERE/dist/Brave 2016-linux-x64"
+SELF="$(cd "$(dirname "$0")" && pwd)"
+if [ -x "$SELF/Brave 2016" ]; then
+  # running as install.sh from inside an extracted release archive
+  BUILD="$SELF"
+else
+  BUILD="$(cd "$SELF/.." && pwd)/dist/Brave 2016-linux-x64"
+fi
 
 verify () {
   if [ ! -f "$PREFIX/SHA256SUMS" ]; then
@@ -62,6 +68,7 @@ mkdir -p "$PREFIX"
 cp -a "$BUILD/." "$PREFIX/"
 
 # record what was installed, before anyone else has had a chance to touch it
+rm -f "$PREFIX/install.sh"
 ( cd "$PREFIX" && find . -type f ! -name SHA256SUMS -print0 | sort -z |
     xargs -0 sha256sum > SHA256SUMS )
 

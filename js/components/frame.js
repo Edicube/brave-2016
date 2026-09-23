@@ -2,9 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable react/no-find-dom-node, react/no-string-refs, no-case-declarations -- 2016 React idioms, kept rather than rewriting working components; the 2016 stores declare per-case locals throughout; a switch in braces per case is a larger rewrite */
+
+import adInfo from '../data/adInfo.js'
+import Config from '../constants/config.js'
+import FindBar from './findbar.js'
+
 const React = require('react')
 const ReactDOM = require('react-dom')
-const urlParse = require('url').parse
 const path = require('path')
 const WindowActions = require('../actions/windowActions')
 const AppActions = require('../actions/appActions')
@@ -17,9 +22,13 @@ const Partitions = require('../constants/partitions')
 const ipc = Bridge.ipc
 const preloadUrl = 'file://' + path.join(Bridge.getAppPath(), 'app', 'gen', 'webviewPreload.js')
 
-import adInfo from '../data/adInfo.js'
-import Config from '../constants/config.js'
-import FindBar from './findbar.js'
+const protocolOf = (target) => {
+  try {
+    return new window.URL(target).protocol
+  } catch (e) {
+    return null
+  }
+}
 
 class Frame extends ImmutableComponent {
   constructor () {
@@ -42,7 +51,8 @@ class Frame extends ImmutableComponent {
     // still refused in app/windowOpen.js, which decides what becomes a tab.
     this.webview.setAttribute('allowpopups', '')
     this.webview.setAttribute('partition', this.props.frame.get('isPrivate')
-      ? Partitions.private : Partitions.web)
+      ? Partitions.private
+      : Partitions.web)
     if (this.props.frame.get('guestInstanceId')) {
       this.webview.setAttribute('data-guest-instance-id', this.props.frame.get('guestInstanceId'))
     }
@@ -134,7 +144,7 @@ class Frame extends ImmutableComponent {
         }
         break
       case 'view-source':
-        let src = UrlUtil.getViewSourceUrlFromUrl(this.webview.getURL())
+        const src = UrlUtil.getViewSourceUrlFromUrl(this.webview.getURL())
         WindowActions.loadUrl(this.props.frame, src)
         // TODO: Make the URL bar show the view-source: prefix
         break
@@ -174,7 +184,7 @@ class Frame extends ImmutableComponent {
         WindowActions.setFavicon(this.props.frame, e.favicons[0])
       }
     })
-    this.webview.addEventListener('page-title-updated', ({title}) => {
+    this.webview.addEventListener('page-title-updated', ({ title }) => {
       WindowActions.setFrameTitle(this.props.frame, title)
     })
     this.webview.addEventListener('dom-ready', (event) => {
@@ -187,10 +197,10 @@ class Frame extends ImmutableComponent {
         // TODO: These 3 events should be combined into one
         WindowActions.onWebviewLoadStart(
           this.props.frame)
-        let key = this.props.frame.get('key')
+        const key = this.props.frame.get('key')
         WindowActions.setLocation(event.url, key)
         WindowActions.setSecurityState({
-          secure: urlParse(event.url).protocol === 'https:'
+          secure: protocolOf(event.url) === 'https:'
           // TODO: Set extended validation once Electron exposes this
         })
       }
@@ -220,13 +230,13 @@ class Frame extends ImmutableComponent {
           this.webview.getURL())
       }
     })
-    this.webview.addEventListener('media-started-playing', ({title}) => {
+    this.webview.addEventListener('media-started-playing', ({ title }) => {
       WindowActions.setAudioPlaybackActive(this.props.frame, true)
     })
-    this.webview.addEventListener('media-paused', ({title}) => {
+    this.webview.addEventListener('media-paused', ({ title }) => {
       WindowActions.setAudioPlaybackActive(this.props.frame, false)
     })
-    this.webview.addEventListener('did-change-theme-color', ({themeColor}) => {
+    this.webview.addEventListener('did-change-theme-color', ({ themeColor }) => {
       WindowActions.setThemeColor(this.props.frame, themeColor)
     })
 
@@ -238,12 +248,12 @@ class Frame extends ImmutableComponent {
   }
 
   insertAds (currentLocation) {
-    let host = new window.URL(currentLocation).hostname.replace('www.', '')
-    let adDivCandidates = adInfo[host] || []
+    const host = new window.URL(currentLocation).hostname.replace('www.', '')
+    const adDivCandidates = adInfo[host] || []
     // Call this even when there are no matches because we have some logic
     // to replace common divs.
     this.webview.send(messages.SET_AD_DIV_CANDIDATES,
-                      adDivCandidates, Config.vault.replacementUrl)
+      adDivCandidates, Config.vault.replacementUrl)
   }
 
   goBack () {
@@ -266,9 +276,11 @@ class Frame extends ImmutableComponent {
   onFindAll (searchString, caseSensitivity) {
     if (searchString) {
       this.webview.findInPage(searchString,
-                              {matchCase: caseSensitivity,
-                               forward: true,
-                               findNext: false})
+        {
+          matchCase: caseSensitivity,
+          forward: true,
+          findNext: false
+        })
     } else {
       this.onClearMatch()
     }
@@ -277,9 +289,11 @@ class Frame extends ImmutableComponent {
   onFindAgain (searchString, caseSensitivity, forward) {
     if (searchString) {
       this.webview.findInPage(searchString,
-                              {matchCase: caseSensitivity,
-                               forward: forward,
-                               findNext: true})
+        {
+          matchCase: caseSensitivity,
+          forward,
+          findNext: true
+        })
     } else {
       this.onClearMatch()
     }
@@ -300,28 +314,33 @@ class Frame extends ImmutableComponent {
   }
 
   render () {
-    return <div
+    return (
+      <div
         className={cx({
           frameWrapper: true,
           isPreview: this.props.isPreview,
           isActive: this.props.isActive
-        })}>
-      <FindBar
-        ref='findbar'
-        findInPageDetail={null}
-        onFindAll={this.onFindAll.bind(this)}
-        onFindAgain={this.onFindAgain.bind(this)}
-        onHide={this.onFindHide.bind(this)}
-        active={this.props.frame.get('findbarShown')}
-        frame={this.props.frame}
-        findDetail={this.props.frame.get('findDetail')}
-      />
-      <div ref='webviewContainer'
-        className={cx({
-          webviewContainer: true,
-          isPreview: this.props.isPreview
-        })}/>
-    </div>
+        })}
+      >
+        <FindBar
+          ref='findbar'
+          findInPageDetail={null}
+          onFindAll={this.onFindAll.bind(this)}
+          onFindAgain={this.onFindAgain.bind(this)}
+          onHide={this.onFindHide.bind(this)}
+          active={this.props.frame.get('findbarShown')}
+          frame={this.props.frame}
+          findDetail={this.props.frame.get('findDetail')}
+        />
+        <div
+          ref='webviewContainer'
+          className={cx({
+            webviewContainer: true,
+            isPreview: this.props.isPreview
+          })}
+        />
+      </div>
+    )
   }
 }
 

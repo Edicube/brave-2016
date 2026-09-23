@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable react/no-string-refs -- 2016 React idioms, kept rather than rewriting working components */
+
 const React = require('react')
 const ImmutableComponent = require('./immutableComponent')
 const Bridge = require('../lib/bridge')
@@ -64,7 +66,7 @@ class Main extends ImmutableComponent {
       const filteredFrameProps = this.props.windowState.get('frames').filter(frame => frame.get('location') === details.firstPartyUrl)
       if (process.env.BRAVE_DEBUG) {
         console.log(`${blockType} attributed to ${filteredFrameProps.size} frame(s):`,
-                    details.firstPartyUrl, '<-', details.url)
+          details.firstPartyUrl, '<-', details.url)
       }
       filteredFrameProps.forEach(frameProps =>
         WindowActions.setBlockedBy(frameProps, blockType, details.url))
@@ -84,7 +86,7 @@ class Main extends ImmutableComponent {
     const height = document.querySelector('#navigator').getBoundingClientRect().bottom
     if (pageY <= height && this.props.windowState.getIn(['ui', 'mouseInTitlebar']) !== true) {
       WindowActions.setMouseInTitlebar(true)
-    } else if (pageY === undefined || pageY > height && this.props.windowState.getIn(['ui', 'mouseInTitlebar']) !== false) {
+    } else if (pageY === undefined || (pageY > height && this.props.windowState.getIn(['ui', 'mouseInTitlebar']) !== false)) {
       WindowActions.setMouseInTitlebar(false)
     }
   }
@@ -128,7 +130,8 @@ class Main extends ImmutableComponent {
 
   render () {
     const comparatorByKeyAsc = (a, b) => a.get('key') > b.get('key')
-      ? 1 : b.get('key') > a.get('key') ? -1 : 0
+      ? 1
+      : b.get('key') > a.get('key') ? -1 : 0
 
     // Sort frames by key so that the order of the frames do not change which could
     // cause unexpected reloading when a user moves tabs.
@@ -136,59 +139,70 @@ class Main extends ImmutableComponent {
     // can be passed everywhere other than the Frame elements.
     const sortedFrames = this.props.windowState.get('frames').sort(comparatorByKeyAsc)
 
-    let activeFrame = FrameStateUtil.getActiveFrame(this.props.windowState)
-    return <div id='window'>
-      <div className='top'>
-        <div className='backforward'>
-          <span
-            className='back fa fa-angle-left'
-            disabled={!activeFrame || !activeFrame.get('canGoBack')}
-            onClick={this.onBack.bind(this)} />
-          <span
-            className='forward fa fa-angle-right'
-            disabled={!activeFrame || !activeFrame.get('canGoForward')}
-            onClick={this.onForward.bind(this)} />
+    const activeFrame = FrameStateUtil.getActiveFrame(this.props.windowState)
+    return (
+      <div id='window'>
+        <div className='top'>
+          <div className='backforward'>
+            <span
+              className='back fa fa-angle-left'
+              disabled={!activeFrame || !activeFrame.get('canGoBack')}
+              onClick={this.onBack.bind(this)}
+            />
+            <span
+              className='forward fa fa-angle-right'
+              disabled={!activeFrame || !activeFrame.get('canGoForward')}
+              onClick={this.onForward.bind(this)}
+            />
+          </div>
+          <NavigationBar
+            navbar={activeFrame && activeFrame.get('navbar')}
+            frames={this.props.windowState.get('frames')}
+            sites={this.props.appState.get('sites')}
+            activeFrame={activeFrame}
+            mouseInTitlebar={this.props.windowState.getIn(['ui', 'mouseInTitlebar'])}
+            searchSuggestions={activeFrame && activeFrame.getIn(['navbar', 'urlbar', 'searchSuggestions'])}
+            searchDetail={this.props.windowState.get('searchDetail')}
+          />
+          {this.props.windowState.getIn(['ui', 'siteInfo', 'isVisible'])
+            ? <SiteInfo
+                frameProps={activeFrame}
+                siteInfo={this.props.windowState.getIn(['ui', 'siteInfo'])}
+                onHide={this.onHideSiteInfo.bind(this)}
+              />
+            : null}
+          {this.props.windowState.getIn(['ui', 'releaseNotes', 'isVisible'])
+            ? <ReleaseNotes
+                metadata={this.props.appState.getIn(['updates', 'metadata'])}
+                onHide={this.onHideReleaseNotes.bind(this)}
+              />
+            : null}
+          <div className='topLevelEndButtons'>
+            <Button
+              iconClass='braveMenu'
+              className='navbutton'
+              onClick={this.onBraveMenu.bind(this)}
+            />
+          </div>
+          <TabPages
+            frames={this.props.windowState.get('frames')}
+            tabPageIndex={this.props.windowState.getIn(['ui', 'tabs', 'tabPageIndex'])}
+          />
+          <TabsToolbar
+            tabs={this.props.windowState.getIn(['ui', 'tabs'])}
+            frames={this.props.windowState.get('frames')}
+            sites={this.props.appState.get('sites')}
+            key='tab-bar'
+            activeFrame={activeFrame}
+          />
+          <UpdateBar updates={this.props.appState.get('updates')} />
         </div>
-        <NavigationBar
-          navbar={activeFrame && activeFrame.get('navbar')}
-          frames={this.props.windowState.get('frames')}
-          sites={this.props.appState.get('sites')}
-          activeFrame={activeFrame}
-          mouseInTitlebar={this.props.windowState.getIn(['ui', 'mouseInTitlebar'])}
-          searchSuggestions={activeFrame && activeFrame.getIn(['navbar', 'urlbar', 'searchSuggestions'])}
-          searchDetail={this.props.windowState.get('searchDetail')}
-        />
-        { this.props.windowState.getIn(['ui', 'siteInfo', 'isVisible'])
-          ? <SiteInfo frameProps={activeFrame}
-              siteInfo={this.props.windowState.getIn(['ui', 'siteInfo'])}
-              onHide={this.onHideSiteInfo.bind(this)} /> : null
-        }
-        { this.props.windowState.getIn(['ui', 'releaseNotes', 'isVisible'])
-          ? <ReleaseNotes
-              metadata={this.props.appState.getIn(['updates', 'metadata'])}
-              onHide={this.onHideReleaseNotes.bind(this)} /> : null
-        }
-        <div className='topLevelEndButtons'>
-          <Button iconClass='braveMenu'
-            className='navbutton'
-            onClick={this.onBraveMenu.bind(this)} />
-        </div>
-        <TabPages frames={this.props.windowState.get('frames')}
-          tabPageIndex={this.props.windowState.getIn(['ui', 'tabs', 'tabPageIndex'])}
-        />
-        <TabsToolbar
-          tabs={this.props.windowState.getIn(['ui', 'tabs'])}
-          frames={this.props.windowState.get('frames')}
-          sites={this.props.appState.get('sites')}
-          key='tab-bar'
-          activeFrame={activeFrame}
-        />
-        <UpdateBar updates={this.props.appState.get('updates')} />
-      </div>
-      <div className='mainContainer'
-        onFocus={this.onMainFocus.bind(this)}>
-        <div className='tabContainer'>
-        {
+        <div
+          className='mainContainer'
+          onFocus={this.onMainFocus.bind(this)}
+        >
+          <div className='tabContainer'>
+            {
           sortedFrames.map(frame =>
             <Frame
               ref={`frame${frame.get('key')}`}
@@ -200,9 +214,10 @@ class Main extends ImmutableComponent {
               isActive={FrameStateUtil.isFrameKeyActive(this.props.windowState, frame.get('key'))}
             />)
         }
+          </div>
         </div>
       </div>
-    </div>
+    )
   }
 }
 

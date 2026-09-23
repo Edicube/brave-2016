@@ -22,7 +22,7 @@ const messages = require('./constants/messages')
 
 if (process.env.BRAVE_DEBUG) {
   window.addEventListener('unhandledrejection', (e) => {
-    console.error('unhandled rejection:', e.reason && e.reason.stack || e.reason)
+    console.error('unhandled rejection:', (e.reason && e.reason.stack) || e.reason)
   })
 }
 
@@ -30,14 +30,14 @@ if (process.env.BRAVE_DEBUG) {
 // handed over by the main process through the window preload
 // Values that cross contextBridge arrive frozen, and the 2016 stores mutate
 // what they are given, so work on a copy.
-var initial = JSON.parse(JSON.stringify(window.braveBridge.initialState || {}))
-var appState = initial.appState || { windows: [], sites: [], visits: [] }
-var frames = initial.frames || []
+const initial = JSON.parse(JSON.stringify(window.braveBridge.initialState || {}))
+const appState = initial.appState || { windows: [], sites: [], visits: [] }
+const frames = initial.frames || []
 
 ipc.on(messages.REQUEST_WINDOW_STATE, () => {
   ipc.send(messages.RESPONSE_WINDOW_STATE, WindowStore.getState().toJS())
 })
 
 ReactDOM.render(
-  <Window appState={appState} frames={frames}/>,
+  <Window appState={appState} frames={frames} />,
   document.getElementById('windowContainer'))

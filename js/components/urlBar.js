@@ -2,9 +2,20 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable react/no-find-dom-node, react/no-string-refs, react/jsx-handler-names, no-case-declarations -- 2016 React idioms, kept rather than rewriting working components; the 2016 stores declare per-case locals throughout; a switch in braces per case is a larger rewrite */
+
+import { isUrl } from '../lib/appUrlUtil.js'
+
 const React = require('react')
 const ReactDOM = require('react-dom')
-const urlParse = require('url').parse
+
+const protocolOf = (target) => {
+  try {
+    return new window.URL(target).protocol
+  } catch (e) {
+    return null
+  }
+}
 
 const ImmutableComponent = require('./immutableComponent')
 const WindowActions = require('../actions/windowActions')
@@ -16,10 +27,7 @@ const ipc = Bridge.ipc
 const UrlBarSuggestions = require('./urlBarSuggestions.js')
 const messages = require('../constants/messages')
 
-import {isUrl} from '../lib/appUrlUtil.js'
-
 class UrlBar extends ImmutableComponent {
-
   isActive () {
     return this.props.urlbar.get('active')
   }
@@ -39,7 +47,7 @@ class UrlBar extends ImmutableComponent {
   }
 
   updateDOMInputFocus (focused) {
-    let urlInput = ReactDOM.findDOMNode(this.refs.urlInput)
+    const urlInput = ReactDOM.findDOMNode(this.refs.urlInput)
     if (focused) {
       urlInput.focus()
     } else {
@@ -49,7 +57,7 @@ class UrlBar extends ImmutableComponent {
 
   updateDOMInputSelected (selected) {
     if (selected) {
-      let urlInput = ReactDOM.findDOMNode(this.refs.urlInput)
+      const urlInput = ReactDOM.findDOMNode(this.refs.urlInput)
       urlInput.select()
     }
   }
@@ -60,7 +68,7 @@ class UrlBar extends ImmutableComponent {
 
   // restores the url bar to the current location
   restore () {
-    let location = this.props.activeFrameProps.get('location')
+    const location = this.props.activeFrameProps.get('location')
     WindowActions.setNavBarUserInput(location)
   }
 
@@ -73,12 +81,12 @@ class UrlBar extends ImmutableComponent {
     switch (e.keyCode) {
       case KeyCodes.ENTER:
         e.preventDefault()
-        let location = this.props.urlbar.get('location')
+        const location = this.props.urlbar.get('location')
         if (location === null || location.length === 0) {
           this.restore()
           WindowActions.setUrlBarSelected(true)
         } else {
-          let selectedIndex = this.refs.urlBarSuggestions.activeIndex
+          const selectedIndex = this.refs.urlBarSuggestions.activeIndex
           if (this.suggestionsShown && selectedIndex > 0) {
             // load the selected suggestion
             this.refs.urlBarSuggestions.clickSelected()
@@ -166,9 +174,10 @@ class UrlBar extends ImmutableComponent {
   }
 
   get inputValue () {
-    let loc = this.props.urlbar.get('location') === 'about:blank' ? '' : this.props.urlbar.get('location')
+    const loc = this.props.urlbar.get('location') === 'about:blank' ? '' : this.props.urlbar.get('location')
     return this.props.titleMode
-      ? this.props.activeFrameProps.get('title') : loc
+      ? this.props.activeFrameProps.get('title')
+      : loc
   }
 
   get loadTime () {
@@ -190,14 +199,14 @@ class UrlBar extends ImmutableComponent {
   }
 
   get aboutPage () {
-    var protocol = urlParse(this.props.activeFrameProps.get('location')).protocol
+    const protocol = protocolOf(this.props.activeFrameProps.get('location'))
     return ['about:', 'file:', 'chrome:', 'view-source:'].includes(protocol)
   }
 
   get isHTTPPage () {
     // Whether this page is HTTP or HTTPS. We don't show security indicators
     // for other protocols like mailto: and about:.
-    var protocol = urlParse(this.props.activeFrameProps.get('location')).protocol
+    const protocol = protocolOf(this.props.activeFrameProps.get('location'))
     return protocol === 'http:' || protocol === 'https:'
   }
 
@@ -206,39 +215,45 @@ class UrlBar extends ImmutableComponent {
   }
 
   render () {
-    return <form
-      action='#'
-      id='urlbar'
-      ref='urlbar'>
+    return (
+      <form
+        action='#'
+        id='urlbar'
+        ref='urlbar'
+      >
         <span
           onClick={this.onSiteInfo}
           className={cx({
             urlbarIcon: true,
-            'fa': true,
+            fa: true,
             'fa-lock': this.isHTTPPage && this.secure && !this.props.urlbar.get('active') && !this.props.titleMode,
             'fa-unlock': this.isHTTPPage && !this.secure && !this.props.urlbar.get('active') && !this.props.titleMode,
             'fa fa-search': this.props.searchSuggestions && this.props.urlbar.get('focused') && this.props.loading === false,
             'fa fa-file-o': !this.props.searchSuggestions && this.props.urlbar.get('focused') && this.props.loading === false,
             extendedValidation: this.extendedValidationSSL
-          })}/>
-      <input type='text'
-        onFocus={this.onFocus.bind(this)}
-        onBlur={this.onBlur.bind(this)}
-        onKeyDown={this.onKeyDown.bind(this)}
-        onChange={this.onChange.bind(this)}
-        onClick={this.onClick.bind(this)}
-        value={this.inputValue}
-        data-l10n-id='urlbar'
-        className={cx({
-          insecure: !this.secure && this.props.loading === false && !this.isHTTPPage,
-          private: this.private,
-          testHookLoadDone: !this.props.loading
-        })}
-        id='urlInput'
-        readOnly={this.props.titleMode}
-        ref='urlInput'/>
-        { !this.props.titleMode
-          ? <span className='loadTime'>{this.loadTime}</span> : null }
+          })}
+        />
+        <input
+          type='text'
+          onFocus={this.onFocus.bind(this)}
+          onBlur={this.onBlur.bind(this)}
+          onKeyDown={this.onKeyDown.bind(this)}
+          onChange={this.onChange.bind(this)}
+          onClick={this.onClick.bind(this)}
+          value={this.inputValue}
+          data-l10n-id='urlbar'
+          className={cx({
+            insecure: !this.secure && this.props.loading === false && !this.isHTTPPage,
+            private: this.private,
+            testHookLoadDone: !this.props.loading
+          })}
+          id='urlInput'
+          readOnly={this.props.titleMode}
+          ref='urlInput'
+        />
+        {!this.props.titleMode
+          ? <span className='loadTime'>{this.loadTime}</span>
+          : null}
         <UrlBarSuggestions
           ref='urlBarSuggestions'
           suggestions={this.props.urlbar.get('suggestions')}
@@ -250,8 +265,10 @@ class UrlBar extends ImmutableComponent {
           urlLocation={this.props.urlbar.get('location')}
           urlPreview={this.props.urlbar.get('urlPreview')}
           urlActive={this.props.urlbar.get('active')}
-          previewActiveIndex={this.props.previewActiveIndex || 0} />
+          previewActiveIndex={this.props.previewActiveIndex || 0}
+        />
       </form>
+    )
   }
 }
 

@@ -8,6 +8,7 @@
 //
 //   npm run e2e              offline checks
 //   npm run e2e -- --network also the ones that need the internet
+//   npm run e2e -- --show    with the window visible, to watch it
 //
 // Runs on a throwaway profile (BRAVE_PROFILE_DIR), so it can run while the
 // browser is open. Filter engines are copied in from the real profile when
@@ -125,7 +126,81 @@ async function check (name, fn) {
 
 const page = `http://127.0.0.1:${pagePort}/deep/page.html`
 
+const other = `http://127.0.0.1:${pagePort}/other.html`
+const webviews = () => ui("document.querySelectorAll('webview').length")
+const tabUrl = async () => {
+  const t = (await targets()).filter(x => x.type === 'webview')
+  return t.length === 1 ? t[0].url : null
+}
+const shortcut = (channel, ...args) =>
+  ui(`window.braveBridge.sendToSelf(${[channel, ...args].map(a => JSON.stringify(a)).join(', ')}), 'ok'`)
+
+// Ordinary browsing, through the app's own action paths. Runs first, while
+// there is one tab, and leaves the browser back on the fixture page.
+async function functional () {
+  await check('typing an address in the URL bar navigates', async () => {
+    await ui(`(function () {
+      var input = document.getElementById('urlInput')
+      input.focus()
+      var set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+      set.call(input, ${JSON.stringify(other)})
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, keyCode: 13, which: 13, key: 'Enter' }))
+      return 1 })()`)
+    return waitFor(async () => (await tabUrl()) === other, 8000)
+  })
+
+  await check('back and forward', async () => {
+    await shortcut('shortcut-active-frame-back')
+    const back = await waitFor(async () => (await tabUrl()) === page, 8000)
+    await shortcut('shortcut-active-frame-forward')
+    const forward = await waitFor(async () => (await tabUrl()) === other, 8000)
+    return back && forward
+  })
+
+  await check('find in page opens the find bar', async () => {
+    await shortcut('shortcut-active-frame-show-findbar')
+    return waitFor(async () => (await ui("!!document.querySelector('.findBar')")) === true, 5000)
+  })
+
+  await check('bookmarking marks the page as bookmarked', async () => {
+    await shortcut('shortcut-active-frame-bookmark')
+    const on = await waitFor(async () =>
+      (await ui("document.getElementById('navigator').classList.contains('bookmarked')")) === true, 5000)
+    await shortcut('shortcut-active-frame-remove-bookmark')
+    const off = await waitFor(async () =>
+      (await ui("document.getElementById('navigator').classList.contains('bookmarked')")) === false, 5000)
+    return on && off
+  })
+
+  await check('the site info panel opens and lists what was blocked', async () => {
+    await navigate(page)
+    await waitFor(async () => (await tabUrl()) === page, 8000)
+    await ui("document.querySelector('.urlbarIcon').click(), 1")
+    const open = await waitFor(async () => (await ui("!!document.querySelector('.siteInfo')")) === true, 5000)
+    // close it again so it does not cover later checks
+    await ui("document.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 27, bubbles: true })), 1")
+    return open
+  })
+
+  await check('opening and closing a tab', async () => {
+    const before = await webviews()
+    await shortcut('shortcut-new-frame', page)
+    const opened = await waitFor(async () => (await webviews()) === before + 1, 5000)
+    await shortcut('shortcut-close-frame')
+    const closed = await waitFor(async () => (await webviews()) === before, 5000)
+    return opened && closed
+  })
+
+  // back to where the security checks expect to start
+  await navigate(page)
+  await waitFor(async () => (await tabUrl()) === page &&
+    (await web('typeof window.probe')) === 'function', 8000)
+}
+
 async function run () {
+  await functional()
+
   await check('UI is served from brave://ui', async () =>
     (await ui('location.origin')) === 'brave://ui')
 
@@ -170,6 +245,7 @@ async function run () {
   })
 
   await check('window.open refuses javascript:, data: and brave://', async () => {
+    await waitFor(async () => (await web('typeof window.probe')) === 'function', 8000)
     const before = await ui("document.querySelectorAll('webview').length")
     for (const target of ['javascript:alert(1)', 'data:text/html,x', 'brave://ui/index.html']) {
       await web(`window.probe(${JSON.stringify(target)})`)
@@ -257,7 +333,14 @@ async function main () {
   const servers = serveFixtures()
   const electron = path.join(root, 'node_modules', 'electron', 'dist', 'electron')
   const child = spawn(electron, [root, `--remote-debugging-port=${debugPort}`, page], {
-    env: Object.assign({}, process.env, { BRAVE_DEBUG: '1', BRAVE_PROFILE_DIR: profile }),
+    env: Object.assign({}, process.env, {
+      BRAVE_DEBUG: '1',
+      BRAVE_PROFILE_DIR: profile,
+      // refuse instead of opening a prompt nobody is there to answer
+      BRAVE_DENY_PERMISSIONS: '1',
+      // no window flashing through test pages on your screen
+      BRAVE_HIDDEN: process.argv.includes('--show') ? '' : '1'
+    }),
     stdio: ['ignore', 'pipe', 'pipe']
   })
   child.stdout.on('data', d => { log += d })

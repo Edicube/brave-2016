@@ -2,14 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-var webFrame = require('electron').webFrame
-var ipc = require('electron').ipcRenderer
-var messages = require('../../js/constants/messages')
-var KeyCodes = require('../../js/constants/keyCodes')
+const webFrame = require('electron').webFrame
+const ipc = require('electron').ipcRenderer
+const messages = require('../../js/constants/messages')
+const KeyCodes = require('../../js/constants/keyCodes')
 
-var browserZoomLevel = 0
-var browserMaxZoom = 9
-var browserMinZoom = -8
+let browserZoomLevel = 0
+const browserMaxZoom = 9
+const browserMinZoom = -8
 
 ipc.on(messages.ZOOM_IN, function () {
   if (browserMaxZoom > browserZoomLevel) {
@@ -51,7 +51,7 @@ function ensureNodeVisible (node) {
  * @param iframeData The known preprocessed iframeData for that node
  */
 function getAdSize (node, iframeData) {
-  var acceptableAdSizes = [
+  const acceptableAdSizes = [
     [970, 250],
     [970, 90],
     [728, 90],
@@ -61,10 +61,10 @@ function getAdSize (node, iframeData) {
     [120, 600],
     [320, 50]
   ]
-  for (var i = 0; i < acceptableAdSizes.length; i++) {
-    var adSize = acceptableAdSizes[i]
-    if (node.offsetWidth === adSize[0] && node.offsetHeight >= adSize[1] ||
-        node.offsetWidth >= adSize[0] && node.offsetHeight === adSize[1]) {
+  for (let i = 0; i < acceptableAdSizes.length; i++) {
+    const adSize = acceptableAdSizes[i]
+    if ((node.offsetWidth === adSize[0] && node.offsetHeight >= adSize[1]) ||
+        (node.offsetWidth >= adSize[0] && node.offsetHeight === adSize[1])) {
       return adSize
     }
   }
@@ -88,7 +88,7 @@ function processAdNode (node, iframeData, replacementUrl) {
     return
   }
 
-  var adSize = getAdSize(node, iframeData)
+  const adSize = getAdSize(node, iframeData)
   // Could not determine the ad size, so just skip this replacement
   if (!adSize) {
     // we have a replace node node but no replacement, so just display none on it
@@ -98,14 +98,14 @@ function processAdNode (node, iframeData, replacementUrl) {
 
   // generate a random segment
   // @todo - replace with renko targeting
-  var segments = ['IAB2', 'IAB17', 'IAB14', 'IAB21', 'IAB20']
-  var segment = segments[Math.floor(Math.random() * 4)]
-  var time_in_segment = new Date().getSeconds()
-  var segment_expiration_time = 0 // no expiration
+  const segments = ['IAB2', 'IAB17', 'IAB14', 'IAB21', 'IAB20']
+  const segment = segments[Math.floor(Math.random() * 4)]
+  const timeInSegment = new Date().getSeconds()
+  const segmentExpirationTime = 0 // no expiration
 
   // ref param for referrer when possible
-  var srcUrl = replacementUrl + '?width=' + adSize[0] + '&height=' + adSize[1] + '&seg=' + segment + ':' + time_in_segment + ':' + segment_expiration_time
-  var src = '<html><body style="width: ' + adSize[0] + 'px; height: ' + adSize[1] + '; padding: 0; margin: 0; overflow: hidden;"><script src="' + srcUrl + '"></script></body></html>'
+  const srcUrl = replacementUrl + '?width=' + adSize[0] + '&height=' + adSize[1] + '&seg=' + segment + ':' + timeInSegment + ':' + segmentExpirationTime
+  const src = '<html><body style="width: ' + adSize[0] + 'px; height: ' + adSize[1] + '; padding: 0; margin: 0; overflow: hidden;"><script src="' + srcUrl + '"></script></body></html>'
 
   if (node.tagName === 'IFRAME') {
     node.srcdoc = src
@@ -113,7 +113,7 @@ function processAdNode (node, iframeData, replacementUrl) {
     while (node.firstChild) {
       node.removeChild(node.firstChild)
     }
-    var iframe = document.createElement('iframe')
+    const iframe = document.createElement('iframe')
     iframe.style.padding = 0
     iframe.style.border = 0
     iframe.style.margin = 0
@@ -134,13 +134,13 @@ function processAdNode (node, iframeData, replacementUrl) {
 // Fires when the browser has ad replacement information to give
 ipc.on(messages.SET_AD_DIV_CANDIDATES, function (e, adDivCandidates, placeholderUrl) {
   // Keep a lookup for skipped common elements
-  var fallbackNodeDataForCommon = {}
+  const fallbackNodeDataForCommon = {}
 
   // Process all of the specific ad information for this page
   adDivCandidates.forEach(function (iframeData) {
-    var replaceId = iframeData.replapceId || iframeData.rid
-    var selector = '[id="' + replaceId + '"]'
-    var node = document.querySelector(selector)
+    const replaceId = iframeData.replapceId || iframeData.rid
+    const selector = '[id="' + replaceId + '"]'
+    const node = document.querySelector(selector)
     if (!node) {
       return
     }
@@ -157,13 +157,13 @@ ipc.on(messages.SET_AD_DIV_CANDIDATES, function (e, adDivCandidates, placeholder
   })
 
   // Common selectors which could be on every page
-  var commonSelectors = [
+  const commonSelectors = [
     '[id^="google_ads_iframe_"][id$="__container__"]',
     '[id^="ad-slot-banner-"]',
     '[data-ad-slot]'
   ]
   commonSelectors.forEach(commonSelector => {
-    var nodes = document.querySelectorAll(commonSelector)
+    const nodes = document.querySelectorAll(commonSelector)
     if (!nodes) {
       return
     }
@@ -174,9 +174,9 @@ ipc.on(messages.SET_AD_DIV_CANDIDATES, function (e, adDivCandidates, placeholder
 })
 
 document.addEventListener('contextmenu', (e) => {
-  var name = e.target.nodeName.toUpperCase()
-  var nodeProps = {
-    name: name,
+  const name = e.target.nodeName.toUpperCase()
+  const nodeProps = {
+    name,
     src: name === 'A' ? e.target.href : e.target.src
   }
   console.log('sending', nodeProps)

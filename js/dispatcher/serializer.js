@@ -11,8 +11,8 @@ const Immutable = require('immutable')
  * Immutable JS.
  */
 module.exports.serialize = action => {
-  for (let property in action) {
-    if (action.hasOwnProperty(property) && action[property] && action[property].toJS) {
+  for (const property in action) {
+    if (Object.prototype.hasOwnProperty.call(action, property) && action[property] && action[property].toJS) {
       action[property] = action[property].toJS()
     }
   }
@@ -23,8 +23,8 @@ module.exports.serialize = action => {
  * Converts a serialized action in place to one using ImmutableJS where possible.
  */
 module.exports.deserialize = action => {
-  for (let property in action) {
-    if (action.hasOwnProperty(property) && action[property] instanceof Object) {
+  for (const property in action) {
+    if (Object.prototype.hasOwnProperty.call(action, property) && action[property] instanceof Object) {
       action[property] = Immutable.fromJS(action[property])
     }
   }

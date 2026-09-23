@@ -7,7 +7,7 @@
 // textContent, never as markup.
 
 (function () {
-  var reasons = {
+  const reasons = {
     phishing: {
       heading: 'This site was blocked',
       summary: 'It appears on a phishing or malware blocklist, so Brave did not load it.',
@@ -34,8 +34,8 @@
     }
   }
 
-  var detail = {}
-  var raw = window.location.hash.replace(/^#/, '')
+  let detail = {}
+  const raw = window.location.hash.replace(/^#/, '')
   if (raw) {
     try {
       detail = JSON.parse(decodeURIComponent(raw)) || {}
@@ -44,7 +44,7 @@
     }
   }
 
-  var reason = reasons[detail.reason] || reasons.unknown
+  const reason = reasons[detail.reason] || reasons.unknown
   document.getElementById('heading').textContent = reason.heading
   document.getElementById('summary').textContent = reason.summary
   document.getElementById('why').textContent =

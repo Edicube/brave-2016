@@ -2,18 +2,20 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable react/no-find-dom-node, react/jsx-handler-names -- 2016 React idioms, kept rather than rewriting working components */
+
+import Config from '../constants/config.js'
+import top500 from './../data/top500.js'
+import { isSourceAboutUrl, isUrl } from '../lib/appUrlUtil.js'
+import Immutable from 'immutable'
+import debounce from '../lib/debounce.js'
+
 const React = require('react')
 const ReactDOM = require('react-dom')
 
 const WindowActions = require('../actions/windowActions')
 const ImmutableComponent = require('./immutableComponent')
-
-import Config from '../constants/config.js'
-import top500 from './../data/top500.js'
-import {isSourceAboutUrl, isUrl} from '../lib/appUrlUtil.js'
-import Immutable from 'immutable'
-import debounce from '../lib/debounce.js'
-const {getSiteIconClass} = require('../state/siteUtil.js')
+const { getSiteIconClass } = require('../state/siteUtil.js')
 
 class UrlBarSuggestions extends ImmutableComponent {
   constructor (props) {
@@ -33,12 +35,12 @@ class UrlBarSuggestions extends ImmutableComponent {
   }
 
   previousSuggestion () {
-    var suggestions = this.props.suggestions.get('suggestionList')
+    const suggestions = this.props.suggestions.get('suggestionList')
     if (!suggestions) {
       return
     }
 
-    var newIndex = this.props.suggestions.get('selectedIndex') - 1
+    let newIndex = this.props.suggestions.get('selectedIndex') - 1
     if (newIndex < 0) {
       newIndex = suggestions.size
     }
@@ -61,13 +63,13 @@ class UrlBarSuggestions extends ImmutableComponent {
 
   // Whether the suggestions box should be rendered
   shouldRender () {
-    let suggestions = this.props.suggestions.get('suggestionList')
+    const suggestions = this.props.suggestions.get('suggestionList')
     return (this.props.urlLocation || this.props.urlPreview) &&
       this.props.urlActive && suggestions && suggestions.size > 0
   }
 
   render () {
-    var suggestions = this.props.suggestions.get('suggestionList')
+    const suggestions = this.props.suggestions.get('suggestionList')
     window.removeEventListener('click', this)
 
     if (!this.shouldRender()) {
@@ -77,18 +79,22 @@ class UrlBarSuggestions extends ImmutableComponent {
     // Add an event listener on the window to hide suggestions when they are shown.
     window.addEventListener('click', this)
 
-    return <ul className='urlBarSuggestions'>
-      {suggestions.map((suggestion, index) =>
-        <li data-index={index + 1}
+    return (
+      <ul className='urlBarSuggestions'>
+        {suggestions.map((suggestion, index) =>
+          <li
+            data-index={index + 1}
             onMouseOver={this.onMouseOver.bind(this)}
             onClick={suggestion.onClick}
             key={suggestion.title}
-            className={this.activeIndex === index + 1 ? 'selected' : ''}>
-          <span className={`suggestionIcon fa ${suggestion.iconClass}`}/>
-          <span className='suggestionText'>{suggestion.title}</span>
-        </li>
-      )}
-    </ul>
+            className={this.activeIndex === index + 1 ? 'selected' : ''}
+          >
+            <span className={`suggestionIcon fa ${suggestion.iconClass}`} />
+            <span className='suggestionText'>{suggestion.title}</span>
+          </li>
+        )}
+      </ul>
+    )
   }
 
   onMouseOver (e) {
@@ -107,8 +113,8 @@ class UrlBarSuggestions extends ImmutableComponent {
       return null
     }
 
-    let navigateClickHandler = formatUrl => site => {
-      let location = formatUrl(site)
+    const navigateClickHandler = formatUrl => site => {
+      const location = formatUrl(site)
       WindowActions.setNavBarUserInput(location)
       WindowActions.loadUrl(this.props.activeFrameProps, location)
       WindowActions.setUrlBarActive(false)
@@ -116,28 +122,29 @@ class UrlBarSuggestions extends ImmutableComponent {
     }
 
     let suggestions = new Immutable.List()
-    let defaultme = x => x
-    let mapListToElements = ({data, maxResults, classHandler, clickHandler = navigateClickHandler,
-        sortHandler = defaultme, formatTitle = defaultme,
-        filterValue = site => site.toLowerCase().includes(this.props.urlLocation.toLowerCase())
+    const defaultme = x => x
+    const mapListToElements = ({
+      data, maxResults, classHandler, clickHandler = navigateClickHandler,
+      sortHandler = defaultme, formatTitle = defaultme,
+      filterValue = site => site.toLowerCase().includes(this.props.urlLocation.toLowerCase())
     }) => // Filter out things which are already in our own list at a smaller index
       data.filter((site, index) => {
         return data.findIndex(x => formatTitle(x).toLowerCase() === formatTitle(site).toLowerCase()) === index
       })
       // Per suggestion provider filter
-      .filter(filterValue)
+        .filter(filterValue)
       // Filter out things which are already in the suggestions list
-      .filter(site =>
-        suggestions.findIndex(x => x.title.toLowerCase() === formatTitle(site).toLowerCase()) === -1)
-      .sort(sortHandler)
-      .take(maxResults)
-      .map(site => {
-        return {
-          onClick: clickHandler.bind(null, site),
-          title: formatTitle(site),
-          iconClass: classHandler(site)
-        }
-      })
+        .filter(site =>
+          suggestions.findIndex(x => x.title.toLowerCase() === formatTitle(site).toLowerCase()) === -1)
+        .sort(sortHandler)
+        .take(maxResults)
+        .map(site => {
+          return {
+            onClick: clickHandler.bind(null, site),
+            title: formatTitle(site),
+            iconClass: classHandler(site)
+          }
+        })
 
     // opened frames
     suggestions = suggestions.concat(mapListToElements({
@@ -149,8 +156,9 @@ class UrlBarSuggestions extends ImmutableComponent {
       formatTitle: frame => frame.get('title') || frame.get('location'),
       filterValue: frame => !isSourceAboutUrl(frame.get('location')) &&
         frame.get('key') !== this.props.activeFrameProps.get('key') &&
-        (frame.get('title') && frame.get('title').toLowerCase().includes(this.props.urlLocation.toLowerCase()) ||
-        frame.get('location') && frame.get('location').toLowerCase().includes(this.props.urlLocation.toLowerCase()))}))
+        ((frame.get('title') && frame.get('title').toLowerCase().includes(this.props.urlLocation.toLowerCase())) ||
+        (frame.get('location') && frame.get('location').toLowerCase().includes(this.props.urlLocation.toLowerCase())))
+    }))
 
     // history, bookmarks, reader list
     suggestions = suggestions.concat(mapListToElements({
@@ -165,8 +173,8 @@ class UrlBarSuggestions extends ImmutableComponent {
       },
       formatTitle: site => site.get('title') || site.get('location'),
       filterValue: site => {
-        let title = site.get('title') || ''
-        let location = site.get('location') || ''
+        const title = site.get('title') || ''
+        const location = site.get('location') || ''
         return title.toLowerCase().includes(this.props.urlLocation.toLowerCase()) ||
           location.toLowerCase().includes(this.props.urlLocation.toLowerCase())
       }
@@ -179,7 +187,8 @@ class UrlBarSuggestions extends ImmutableComponent {
         maxResults: Config.urlBarSuggestions.maxTopSites,
         classHandler: () => 'fa-search',
         clickHandler: navigateClickHandler(searchTerms => this.props.searchDetail.get('searchURL')
-          .replace('{searchTerms}', searchTerms))}))
+          .replace('{searchTerms}', searchTerms))
+      }))
     }
 
     // Alexa top 500
@@ -187,14 +196,15 @@ class UrlBarSuggestions extends ImmutableComponent {
       data: top500,
       maxResults: Config.urlBarSuggestions.maxSearch,
       classHandler: () => 'fa-link',
-      clickHandler: navigateClickHandler(x => x)}))
+      clickHandler: navigateClickHandler(x => x)
+    }))
 
     // Update the urlbar preview content
     if (newIndex === 0 || newIndex > suggestions.size) {
       WindowActions.setUrlBarPreview(null)
       newIndex = null
     } else {
-      var currentActive = suggestions.get(newIndex - 1)
+      const currentActive = suggestions.get(newIndex - 1)
       if (currentActive && currentActive.title) {
         WindowActions.setUrlBarPreview(currentActive.title)
       }
@@ -208,9 +218,9 @@ class UrlBarSuggestions extends ImmutableComponent {
       return
     }
 
-    let urlLocation = this.props.urlLocation
+    const urlLocation = this.props.urlLocation
     if (!isUrl(urlLocation) && urlLocation.length > 0) {
-      let xhr = new window.XMLHttpRequest({mozSystem: true})
+      const xhr = new window.XMLHttpRequest({ mozSystem: true })
       xhr.open('GET', this.props.searchDetail.get('autocompleteURL')
         .replace('{searchTerms}', urlLocation), true)
       xhr.responseType = 'json'

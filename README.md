@@ -1,5 +1,7 @@
 # Brave 2016
 
+[![CI](https://github.com/Edicube/brave-2016/actions/workflows/ci.yml/badge.svg)](https://github.com/Edicube/brave-2016/actions/workflows/ci.yml)
+
 > **⚠️ This browser is not safe for everyday use.**
 >
 > It is a hobby revival of the January 2016 Brave codebase, not a maintained
@@ -13,7 +15,23 @@ A desktop browser built on the 2016 Brave codebase (MPL-2.0), updated to run on
 Electron 44. Original UI, modern security posture - as far as a project like
 this can have one. See [What "not safe" means](#what-not-safe-means).
 
-## Running it
+## Installing a release
+
+Download the latest archive from
+[Releases](https://github.com/Edicube/brave-2016/releases), then check it and
+install it root-owned, so nothing running as your user can modify it:
+
+```bash
+sha256sum -c SHA256SUMS.txt
+gh attestation verify brave-2016-*-linux-x64.tar.gz -R Edicube/brave-2016
+tar xzf brave-2016-*-linux-x64.tar.gz
+sudo sh "Brave 2016-linux-x64/install.sh"
+```
+
+`gh attestation verify` proves the archive was built by this repository's
+release workflow from a tagged commit, not by someone's laptop.
+
+## Running it from source
 
 You need Node.js (LTS) and npm.
 
@@ -40,8 +58,13 @@ To open a page directly: `npm start -- https://example.com`
 - **Drops third-party cookies** and trims cross-site referrers to the origin.
 - **Refuses bad certificates** with an explanation, and asks before every
   download.
-- **Denies camera, microphone, location and notifications** to every site, since
-  this version has no permission prompt.
+- **Asks before a site gets the camera, microphone or notifications**, for this
+  session only; everything else (location, USB, MIDI, screen capture...) is
+  refused outright.
+- **Shows download progress** on the taskbar, notifies when a download finishes,
+  and can cancel them from File > Cancel downloads.
+- **Tells you when a newer release exists** - one request to GitHub, at most
+  daily. It does not download or install anything by itself.
 
 ## Scripts
 
@@ -61,11 +84,12 @@ To open a page directly: `npm start -- https://example.com`
 
 Concretely, and in order of how much it matters:
 
-1. **No updates.** The original auto-updater points at servers that no longer
-   exist. Every Chromium vulnerability published after your last rebuild stays
-   open until you rebuild. The browser warns once a build is 45 days old, and
-   `npm run doctor` tells you whether the Electron version is still supported -
-   but only you can act on it.
+1. **No automatic updates.** Nothing installs itself. Dependabot opens a pull
+   request when Electron (and with it Chromium) has a new release, CI tests it,
+   and a tagged release is built from it - but you still have to download and
+   install that release. Until you do, every Chromium vulnerability published
+   since your build stays open. The browser tells you when a newer release
+   exists, and warns once a build is 45 days old.
 2. **Small project, no review.** The security work here was done and tested by
    one person with an AI assistant. It has found and fixed several real holes
    along the way (see [docs/security.md](docs/security.md)); there are almost

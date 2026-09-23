@@ -8,12 +8,14 @@ const Dialog = require('./dialog')
 
 class ReleaseNotes extends ImmutableComponent {
   render () {
-    return <Dialog onHide={this.props.onHide} isClickDismiss>
-      <div className='releaseNotes'>
-        <h1>{this.props.metadata.get('name')}</h1>
-        <div>{this.props.metadata.get('notes')}</div>
-      </div>
-    </Dialog>
+    return (
+      <Dialog onHide={this.props.onHide} isClickDismiss>
+        <div className='releaseNotes'>
+          <h1>{this.props.metadata.get('name')}</h1>
+          <div>{this.props.metadata.get('notes')}</div>
+        </div>
+      </Dialog>
+    )
   }
 }
 

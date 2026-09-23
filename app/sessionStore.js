@@ -30,8 +30,9 @@ module.exports.saveAppState = (payload) => {
   return new Promise((resolve, reject) => {
     // Don't persist private frames
     if (payload.perWindowState) {
-      payload.perWindowState.forEach(wndPayload =>
-        wndPayload.frames = wndPayload.frames.filter(frame => !frame.isPrivate))
+      payload.perWindowState.forEach(wndPayload => {
+        wndPayload.frames = wndPayload.frames.filter(frame => !frame.isPrivate)
+      })
     }
 
     // Always recalculate the update status

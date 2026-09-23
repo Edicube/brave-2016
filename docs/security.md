@@ -243,10 +243,31 @@ owned by root, with a checksum manifest; `npm run verify-install` checks it.
 This is the integrity control that works on Linux, where Electron cannot verify
 its ASAR archive.
 
+**Permissions are asked about, narrowly.** Camera, microphone and
+notifications prompt, naming the site; the answer lasts for the session, and a
+"Block" is remembered as firmly as an "Allow", so a page cannot keep asking.
+Only the page in the tab may ask, never a frame from another origin it embeds.
+Everything else - location, USB, HID, serial, MIDI, screen capture, idle
+detection, opening external apps - is refused without a prompt
+([app/permissions.js](../app/permissions.js)).
+
+**Updates are proposed, never applied.** Dependabot opens pull requests for new
+Electron and dependency versions, CI runs lint, unit tests and the end-to-end
+checks on every one, and a weekly run of `npm run doctor` fails the build when
+the Electron major falls out of support. Tagged releases are built by
+[.github/workflows/release.yml](../.github/workflows/release.yml) with a
+provenance attestation (`gh attestation verify`). The browser checks the latest
+release once a day and says so if it is newer. It never downloads or runs
+anything itself: an auto-installer would be a much larger attack surface than
+this project can look after.
+
+**Workflow actions are pinned to commit SHAs**, not tags, so a compromised
+action repository cannot change what runs in CI or signs releases.
+
 ## What is still weak
 
-- **The updater is inert.** There is no patch delivery mechanism, so keeping
-  this safe means updating by hand. This is the largest remaining risk, because
+- **Installing updates is still manual.** Releases are built and announced,
+  but nothing installs them. This is the largest remaining risk, because
   it is the only one that grows on its own. `npm run doctor` reports whether the
   Electron major is still supported, whether the fuses survived, and what npm
   audit says.
@@ -257,10 +278,11 @@ its ASAR archive.
 - **Cosmetic filtering is styles only.** The lists also carry scriptlets, which
   would mean running code in every page; they are not injected, so some ads
   that are built by script still show.
-- **No certificate warning UI.** A bad certificate fails the load rather than
-  offering an informed choice, because there is no interstitial for it.
+- **No "proceed anyway" on bad certificates.** The warning page explains what
+  went wrong, but there is deliberately no way past it.
 - **The blocklists are third-party.** Phishing and ad blocking are only as good
-  as the lists, and a false positive has no in-browser bypass.
+  as the lists. The warning page shows the rule that matched, but a false
+  positive has no in-browser bypass.
 
 ## Re-running the checks
 

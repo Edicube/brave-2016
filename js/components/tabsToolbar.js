@@ -2,6 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable react/jsx-handler-names -- 2016 React idioms, kept rather than rewriting working components */
+
+import Config from '../constants/config.js'
 const React = require('react')
 const ImmutableComponent = require('./immutableComponent')
 const Tabs = require('./tabs')
@@ -10,7 +13,6 @@ const PinnedTabs = require('./pinnedTabs')
 const WindowActions = require('../actions/windowActions')
 const Bridge = require('../lib/bridge')
 const messages = require('../constants/messages')
-import Config from '../constants/config.js'
 
 class TabsToolbarButtons extends ImmutableComponent {
   onMenu () {
@@ -18,14 +20,21 @@ class TabsToolbarButtons extends ImmutableComponent {
   }
 
   render () {
-    return <div className='tabsToolbarButtons'>
-      { this.props.partOfFullPageSet || this.props.noFrames
-          ? <Button label='+'
-              className='navbutton newFrameButton' onClick={WindowActions.newFrame} /> : null }
-      <Button iconClass='fa-bars'
-        className='navbutton menu-button'
-        onClick={this.onMenu.bind(this)} />
-    </div>
+    return (
+      <div className='tabsToolbarButtons'>
+        {this.props.partOfFullPageSet || this.props.noFrames
+          ? <Button
+              label='+'
+              className='navbutton newFrameButton' onClick={WindowActions.newFrame}
+            />
+          : null}
+        <Button
+          iconClass='fa-bars'
+          className='navbutton menu-button'
+          onClick={this.onMenu.bind(this)}
+        />
+      </div>
+    )
   }
 }
 
@@ -39,23 +48,31 @@ class TabsToolbar extends ImmutableComponent {
       .filter(frame => !frame.get('isPinned'))
       .slice(startingFrameIndex, startingFrameIndex + Config.tabs.tabsPerPage)
 
-    return <div className='tabsToolbar'>
-      { pinnedFrames.size > 0
-        ? <PinnedTabs sites={this.props.sites}
-        frames={this.props.frames}
-        activeFrame={this.props.activeFrame}
-        tabs={this.props.tabs}/> : null }
-      <Tabs tabs={this.props.tabs}
-        frames={this.props.frames}
-        activeFrame={this.props.activeFrame}
-        tabPageIndex={tabPageIndex}
-        currentFrames={currentFrames}
-        startingFrameIndex={startingFrameIndex}
-        partOfFullPageSet={currentFrames.size === Config.tabs.tabsPerPage}
-      />
-      <TabsToolbarButtons partOfFullPageSet={currentFrames.size === Config.tabs.tabsPerPage}
-        noFrames={currentFrames.size === 0}/>
-    </div>
+    return (
+      <div className='tabsToolbar'>
+        {pinnedFrames.size > 0
+          ? <PinnedTabs
+              sites={this.props.sites}
+              frames={this.props.frames}
+              activeFrame={this.props.activeFrame}
+              tabs={this.props.tabs}
+            />
+          : null}
+        <Tabs
+          tabs={this.props.tabs}
+          frames={this.props.frames}
+          activeFrame={this.props.activeFrame}
+          tabPageIndex={tabPageIndex}
+          currentFrames={currentFrames}
+          startingFrameIndex={startingFrameIndex}
+          partOfFullPageSet={currentFrames.size === Config.tabs.tabsPerPage}
+        />
+        <TabsToolbarButtons
+          partOfFullPageSet={currentFrames.size === Config.tabs.tabsPerPage}
+          noFrames={currentFrames.size === 0}
+        />
+      </div>
+    )
   }
 }
 

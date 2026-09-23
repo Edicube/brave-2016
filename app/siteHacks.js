@@ -28,8 +28,8 @@ module.exports.init = () => {
     } catch (e) {
       return { shouldBlock: false, resourceName }
     }
-    let domain = hostname.split('.').slice(-2).join('.')
-    let hack = siteHacks[domain]
+    const domain = hostname.split('.').slice(-2).join('.')
+    const hack = siteHacks[domain]
     let cbArgs = {}
     if (hack) {
       cbArgs = { requestHeaders: hack.call(this, details) }

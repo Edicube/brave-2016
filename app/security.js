@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable n/no-callback-literal -- Electron callbacks take a result, not a node-style error */
+
 'use strict'
 
 // Guards that Electron did not need in 2016, because the defaults were
@@ -23,19 +25,6 @@ const debug = (...args) => {
   }
 }
 
-// Electron approves every permission request when no handler is installed.
-// This version of Brave has no permission prompt to show, so anything that
-// reaches for hardware, location or the user's attention is refused. The few
-// exceptions are needed to play video and cannot read anything back.
-const allowedPermissions = new Set([
-  // full screen video
-  'fullscreen',
-  // Widevine and friends, for sites that will not play video without it
-  'mediaKeySystem',
-  // write-only, and Chromium sanitises what goes on the clipboard
-  'clipboard-sanitized-write'
-])
-
 // Chromium's certificate errors occupy the -200 block of its net error codes
 const isCertificateError = (errorCode) => errorCode <= -200 && errorCode > -300
 
@@ -43,16 +32,8 @@ const isCertificateError = (errorCode) => errorCode <= -200 && errorCode > -300
 const CERT_AUTHORITY_INVALID = -202
 
 function registerPermissionHandlers (ses) {
-  ses.setPermissionRequestHandler((webContents, permission, callback, details) => {
-    const allowed = allowedPermissions.has(permission)
-    debug(`${allowed ? 'allowing' : 'denying'} ${permission} for`,
-      (details && details.requestingUrl) || (webContents && webContents.getURL()))
-    callback(allowed)
-  })
-
-  // navigator.permissions.query and other synchronous checks
-  ses.setPermissionCheckHandler((webContents, permission) =>
-    allowedPermissions.has(permission))
+  // camera, microphone and notifications are asked about; see app/permissions.js
+  require('./permissions').register(ses)
 
   // WebUSB, WebHID and Web Serial: never hand over a physical device
   ses.setDevicePermissionHandler(() => false)
@@ -320,6 +301,7 @@ function confirmDownloads (ses) {
       savePathFor.delete(from)
       item.setSavePath(chosen)
       debug('saving to', chosen)
+      require('./downloads').track(item)
       return
     }
 
@@ -461,7 +443,7 @@ module.exports.blockedPageUrl = (blockedTarget, reason, detail) =>
   UiProtocol.url('blocked.html') + '#' + encodeURIComponent(JSON.stringify({
     url: blockedTarget,
     reason: reason || 'unknown',
-    detail: detail
+    detail
   }))
 
 module.exports.init = () => {

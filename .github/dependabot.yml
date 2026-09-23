@@ -1,0 +1,22 @@
+# Opens pull requests for new versions, which CI then tests. Electron gets its
+# own group so a Chromium security update is never buried among tooling bumps.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      electron:
+        patterns: ['electron']
+      runtime:
+        dependency-type: production
+      tooling:
+        dependency-type: development
+        exclude-patterns: ['electron']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

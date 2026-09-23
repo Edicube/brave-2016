@@ -13,6 +13,7 @@ const HttpsEverywhere = require('./httpsEverywhere')
 const AdBlock = require('./adBlock')
 const TrackingProtection = require('./trackingProtection')
 const Filtering = require('./filtering')
+const Downloads = require('./downloads')
 
 const name = 'Brave'
 const isWindows = process.platform === 'win32'
@@ -52,7 +53,7 @@ const init = (args) => {
     accelerator: 'CmdOrCtrl+D',
     checked: args.bookmarked || false,
     click: function (item, focusedWindow) {
-      var msg = bookmarkPageMenuItem.checked
+      const msg = bookmarkPageMenuItem.checked
         ? messages.SHORTCUT_ACTIVE_FRAME_REMOVE_BOOKMARK
         : messages.SHORTCUT_ACTIVE_FRAME_BOOKMARK
       sendToFocusedWindow(focusedWindow, [msg])
@@ -78,6 +79,13 @@ const init = (args) => {
 
   const fileMenu = [
     {
+      id: Downloads.menuItemId,
+      label: 'Cancel downloads',
+      enabled: Downloads.activeCount() > 0,
+      click: () => Downloads.cancelAll()
+    }, {
+      type: 'separator'
+    }, {
       label: 'Check for updates ...',
       click: function (item, focusedWindow) {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -86,13 +94,13 @@ const init = (args) => {
         process.emit(messages.CHECK_FOR_UPDATE)
       }
     },
-// Note: we are keeping this here for testing. Calling process.crash() from the inspector does not create a crash report.
-//        {
-//          label: 'Crash!!!!!',
-//          click: function (item, focusedWindow) {
-//            process.crash()
-//          }
-//        },
+    // Note: we are keeping this here for testing. Calling process.crash() from the inspector does not create a crash report.
+    //        {
+    //          label: 'Crash!!!!!',
+    //          click: function (item, focusedWindow) {
+    //            process.crash()
+    //          }
+    //        },
     {
       label: 'New Tab',
       accelerator: 'CmdOrCtrl+T',
@@ -216,13 +224,13 @@ const init = (args) => {
       label: 'Submit Feedback...',
       click: function (item, focusedWindow) {
         sendToFocusedWindow(focusedWindow,
-                            [messages.SHORTCUT_NEW_FRAME, contactUrl])
+          [messages.SHORTCUT_NEW_FRAME, contactUrl])
       }
     }, {
       label: 'Spread the word about Brave...',
       click: function (item, focusedWindow) {
         sendToFocusedWindow(focusedWindow,
-                            [messages.SHORTCUT_NEW_FRAME, aboutUrl])
+          [messages.SHORTCUT_NEW_FRAME, aboutUrl])
       }
     }
   ]
@@ -235,7 +243,7 @@ const init = (args) => {
     helpMenu.push(aboutBraveMenuItem)
   }
 
-  var template = [
+  const template = [
     {
       label: 'File',
       submenu: fileMenu
@@ -501,7 +509,7 @@ const init = (args) => {
           checked: Filtering.isResourceEnabled(AdBlock.resourceName),
           click: function (item, focusedWindow) {
             AppActions.setResourceEnabled(AdBlock.resourceName, !Filtering.isResourceEnabled(AdBlock.resourceName))
-            init({bookmarked: bookmarkPageMenuItem.checked})
+            init({ bookmarked: bookmarkPageMenuItem.checked })
           }
         }, {
           type: 'checkbox',
@@ -514,7 +522,7 @@ const init = (args) => {
           checked: Filtering.isResourceEnabled(TrackingProtection.resourceName),
           click: function (item, focusedWindow) {
             AppActions.setResourceEnabled(TrackingProtection.resourceName, !Filtering.isResourceEnabled(TrackingProtection.resourceName))
-            init({bookmarked: bookmarkPageMenuItem.checked})
+            init({ bookmarked: bookmarkPageMenuItem.checked })
           }
         }, {
           type: 'checkbox',
@@ -527,7 +535,7 @@ const init = (args) => {
           checked: Filtering.isResourceEnabled(HttpsEverywhere.resourceName),
           click: function (item, focusedWindow) {
             AppActions.setResourceEnabled(HttpsEverywhere.resourceName, !Filtering.isResourceEnabled(HttpsEverywhere.resourceName))
-            init({bookmarked: bookmarkPageMenuItem.checked})
+            init({ bookmarked: bookmarkPageMenuItem.checked })
           }
         }, {
           type: 'separator'

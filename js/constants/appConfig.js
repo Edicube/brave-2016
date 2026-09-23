@@ -3,9 +3,9 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // UPDATE_HOST should be set to the host name for the auto-updater server
-var updateHost = process.env.UPDATE_HOST || 'https://brave-laptop-updates.global.ssl.fastly.net'
-var winUpdateHost = process.env.WIN_UPDATE_HOST || 'https://brave-download.global.ssl.fastly.net'
-var crashURL = process.env.CRASH_URL || 'https://laptop-updates.brave.com/1/crashes'
+const updateHost = process.env.UPDATE_HOST || 'https://brave-laptop-updates.global.ssl.fastly.net'
+const winUpdateHost = process.env.WIN_UPDATE_HOST || 'https://brave-download.global.ssl.fastly.net'
+const crashURL = process.env.CRASH_URL || 'https://laptop-updates.brave.com/1/crashes'
 
 module.exports = {
   adblock: {
@@ -47,6 +47,15 @@ module.exports = {
     // Trim cross-site referrers to the origin and drop third-party cookies,
     // which is what Brave itself does. This breaks sign-in flows that federate
     // through a third party.
+    enabled: true
+  },
+  updateCheck: {
+    // One request to the GitHub releases API, delayed and at most daily, to
+    // say when a newer release exists. Nothing is downloaded or installed.
+    url: 'https://api.github.com/repos/Edicube/brave-2016/releases/latest',
+    releasesPage: 'https://github.com/Edicube/brave-2016/releases',
+    delayMs: 30 * 1000,
+    msBetweenChecks: 1000 * 60 * 60 * 24,
     enabled: true
   },
   staleness: {

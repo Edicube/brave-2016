@@ -20,7 +20,7 @@ export function getFrameByIndex (windowState, i) {
 }
 
 export function getFrameByKey (windowState, key) {
-  let i = findIndexForFrameKey(windowState.get('frames'), key)
+  const i = findIndexForFrameKey(windowState.get('frames'), key)
   return windowState.getIn(['frames', i])
 }
 
@@ -110,8 +110,8 @@ function isAncestorFrameKey (frames, frame, parentFrameKey) {
   // So there is a parentFrameKey but it isn't the specified one.
   // Check recursively for each of the parentFrame's ancestors to see
   // if we have a match.
-  let parentFrameIndex = findIndexForFrameKey(frames, frame.get('parentFrameKey'))
-  let parentFrame = frames.get(parentFrameIndex)
+  const parentFrameIndex = findIndexForFrameKey(frames, frame.get('parentFrameKey'))
+  const parentFrame = frames.get(parentFrameIndex)
   if (parentFrameIndex === -1 || !parentFrame.get('parentFrameKey')) {
     return false
   }
@@ -123,8 +123,8 @@ function isAncestorFrameKey (frames, frame, parentFrameKey) {
  * @return Immutable top level application state ready to merge back in
  */
 export function addFrame (frames, frameOpts, newKey, activeFrameKey) {
-  var url = frameOpts.location || Config.defaultUrl
-  let frame = Immutable.fromJS({
+  const url = frameOpts.location || Config.defaultUrl
+  const frame = Immutable.fromJS({
     audioMuted: false, // frame is muted
     canGoBack: false,
     canGoForward: false,
@@ -187,8 +187,8 @@ export function undoCloseFrame (windowState, closedFrames) {
   if (closedFrames.size === 0) {
     return {}
   }
-  var closedFrame = closedFrames.last()
-  let insertIndex = closedFrame.get('closedAtIndex')
+  const closedFrame = closedFrames.last()
+  const insertIndex = closedFrame.get('closedAtIndex')
   return {
     closedFrames: closedFrames.pop(),
     frames: windowState.get('frames').splice(insertIndex, 0, closedFrame.remove('closedAtIndex')),
@@ -213,16 +213,16 @@ export function removeFrame (frames, closedFrames, frameProps, activeFrameKey) {
   const activeFrameIndex = findIndexForFrameKey(frames, activeFrameKey)
   const framePropsIndex = getFramePropsIndex(frames, frameProps)
   frames = frames.splice(framePropsIndex, 1)
+  let nextActiveKey = activeFrameKey
+  if (frameProps.get('key') === activeFrameKey && frames.size > 0) {
+    // Go to the next frame if it exists, otherwise the one before the
+    // active tab.
+    const next = frames.get(activeFrameIndex) || frames.get(activeFrameIndex - 1)
+    nextActiveKey = Math.max(next.get('key'), 0)
+  }
   return {
     previewFrameKey: undefined,
-    activeFrameKey: frameProps.get('key') === activeFrameKey && frames.size > 0
-      ? Math.max(
-        frames.get(activeFrameIndex)
-          // Go to the next frame if it exists.
-          ? frames.get(activeFrameIndex).get('key')
-          // Otherwise go to the frame right before the active tab.
-          : frames.get(activeFrameIndex - 1).get('key'),
-        0) : activeFrameKey,
+    activeFrameKey: nextActiveKey,
     closedFrames,
     frames
   }
@@ -254,7 +254,7 @@ export function removeOtherFrames (frames, closedFrames, frameProps) {
  */
 export function computeThemeColor (frameProps) {
   return new Promise((resolve, reject) => {
-    var icon = getFavicon(frameProps)
+    const icon = getFavicon(frameProps)
 
     // The canvas read below can only ever work for same-origin icons: a
     // cross-origin blob taints it. Chromium also logs a CORS error for every
@@ -265,14 +265,14 @@ export function computeThemeColor (frameProps) {
       return
     }
 
-    var xhr = new window.XMLHttpRequest()
+    const xhr = new window.XMLHttpRequest()
 
     xhr.open('GET', icon, true)
     xhr.responseType = 'blob'
     xhr.send()
 
     xhr.onload = function () {
-      var status = xhr.status
+      const status = xhr.status
       if (status !== 0 && status !== 200) {
         reject(
           new Error('Got HTTP status ' + status + ' trying to load ' + icon)
@@ -287,7 +287,7 @@ export function computeThemeColor (frameProps) {
     }
 
     function renderFromBlob (blob) {
-      var img = new window.Image()
+      const img = new window.Image()
       img.src = window.URL.createObjectURL(blob)
 
       img.onload = () => {

@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable n/no-callback-literal -- Electron callbacks take a result, not a node-style error */
+
 'use strict'
 
 const messages = require('../js/constants/messages')
@@ -110,7 +112,7 @@ function registerForSession (session) {
     let results
     let requestHeaders
     for (let i = 0; i < filteringFns.length; i++) {
-      let currentResults = safely(filteringFns[i], details)
+      const currentResults = safely(filteringFns[i], details)
       if (!currentResults) {
         continue
       }
@@ -161,7 +163,7 @@ module.exports.isThirdPartyHost = (baseContextHost, testHost) => {
     return true
   }
 
-  let c = testHost[testHost.length - baseContextHost.length - 1]
+  const c = testHost[testHost.length - baseContextHost.length - 1]
   return c !== '.' && c !== undefined
 }
 

@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable no-case-declarations -- the 2016 stores declare per-case locals throughout; a switch in braces per case is a larger rewrite */
+
 const WindowDispatcher = require('../dispatcher/windowDispatcher')
 const EventEmitter = require('events').EventEmitter
 const WindowConstants = require('../constants/windowConstants')
@@ -23,7 +25,7 @@ let windowState = Immutable.fromJS({
   searchDetail: null
 })
 
-var CHANGE_EVENT = 'change'
+const CHANGE_EVENT = 'change'
 
 const frameStatePath = (key) =>
   ['frames', FrameStateUtil.findIndexForFrameKey(windowState.get('frames'), key)]
@@ -47,7 +49,7 @@ const updateTabPageIndex = (frameProps) => {
   }
 
   const index = FrameStateUtil.getFrameTabPageIndex(windowState.get('frames')
-      .filter(frame => !frame.get('isPinned')), frameProps)
+    .filter(frame => !frame.get('isPinned')), frameProps)
   if (index === -1) {
     return
   }
@@ -58,7 +60,6 @@ let currentKey = 0
 const incrementNextKey = () => ++currentKey
 
 class WindowStore extends EventEmitter {
-
   getState () {
     return windowState
   }
@@ -207,7 +208,7 @@ const doAction = (action) => {
       windowStore.emitChange()
       break
     case WindowConstants.WINDOW_NEW_FRAME:
-      let nextKey = incrementNextKey()
+      const nextKey = incrementNextKey()
       windowState = windowState.merge(FrameStateUtil.addFrame(windowState.get('frames'), action.frameOpts,
         nextKey, action.openInForeground ? nextKey : windowState.get('activeFrameKey')))
       if (action.openInForeground) {
@@ -217,7 +218,7 @@ const doAction = (action) => {
       break
     case WindowConstants.WINDOW_CLOSE_FRAME:
       // Use the frameProps we passed in, or default to the active frame
-      let frameProps = action.frameProps || FrameStateUtil.getActiveFrame(windowState)
+      const frameProps = action.frameProps || FrameStateUtil.getActiveFrame(windowState)
       const closingActive = !action.frameProps || action.frameProps === FrameStateUtil.getActiveFrame(windowState)
       const index = FrameStateUtil.getFramePropsIndex(windowState.get('frames'), frameProps)
       windowState = windowState.merge(FrameStateUtil.removeFrame(windowState.get('frames'),
@@ -243,7 +244,8 @@ const doAction = (action) => {
     case WindowConstants.WINDOW_SET_PREVIEW_FRAME:
       windowState = windowState.merge({
         previewFrameKey: action.frameProps && action.frameProps.get('key') !== windowState.get('activeFrameKey')
-          ? action.frameProps.get('key') : null
+          ? action.frameProps.get('key')
+          : null
       })
       windowStore.emitChange()
       break
@@ -315,7 +317,7 @@ const doAction = (action) => {
       windowStore.emitChange()
       break
     case WindowConstants.WINDOW_TAB_MOVE:
-      let sourceFramePropsIndex = FrameStateUtil.getFramePropsIndex(windowState.get('frames'), action.sourceFrameProps)
+      const sourceFramePropsIndex = FrameStateUtil.getFramePropsIndex(windowState.get('frames'), action.sourceFrameProps)
       let newIndex = FrameStateUtil.getFramePropsIndex(windowState.get('frames'), action.destinationFrameProps) + (action.prepend ? 0 : 1)
       let frames = windowState.get('frames').splice(sourceFramePropsIndex, 1)
       if (newIndex > sourceFramePropsIndex) {
@@ -379,7 +381,7 @@ const doAction = (action) => {
     case WindowConstants.WINDOW_SET_PINNED:
       // Check if there's already a frame which is pinned.
       // If so we just want to set it as active.
-      let alreadyPinnedFrameProps = windowState.get('frames').find(frame => frame.get('isPinned') && frame.get('location') === action.frameProps.get('location'))
+      const alreadyPinnedFrameProps = windowState.get('frames').find(frame => frame.get('isPinned') && frame.get('location') === action.frameProps.get('location'))
       if (alreadyPinnedFrameProps && action.isPinned) {
         action.actionType = WindowConstants.WINDOW_CLOSE_FRAME
         doAction(action)
@@ -423,11 +425,11 @@ const doAction = (action) => {
     case WindowConstants.WINDOW_SET_SECURITY_STATE:
       if (action.securityState.secure !== undefined) {
         windowState = windowState.setIn(activeFrameStatePath().concat(['security', 'isSecure']),
-                                        action.securityState.secure)
+          action.securityState.secure)
       }
       break
     case WindowConstants.SET_BLOCKED_BY:
-      let blockedByPath = ['frames', FrameStateUtil.getFramePropsIndex(windowState.get('frames'), action.frameProps), action.blockType, 'blocked']
+      const blockedByPath = ['frames', FrameStateUtil.getFramePropsIndex(windowState.get('frames'), action.frameProps), action.blockType, 'blocked']
       let blockedBy = windowState.getIn(blockedByPath) || new Immutable.List()
       blockedBy = blockedBy.toSet().add(action.location).toList()
       windowState = windowState.setIn(blockedByPath, blockedBy)
@@ -462,7 +464,7 @@ frameShortcuts.forEach(shortcut => {
   // Listen for actions on frame N
   if (['reload', 'mute'].includes(shortcut)) {
     ipc.on(`shortcut-frame-${shortcut}`, (e, i) => {
-      let path = ['frames', FrameStateUtil.findIndexForFrameKey(windowState.get('frames'), i)]
+      const path = ['frames', FrameStateUtil.findIndexForFrameKey(windowState.get('frames'), i)]
       windowState = windowState.mergeIn(path, {
         activeShortcut: shortcut
       })

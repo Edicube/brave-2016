@@ -8,20 +8,24 @@ const Tab = require('./tab')
 
 class PinnedTabs extends ImmutableComponent {
   render () {
-    return <div className='pinnedTabs'>
-       {
+    return (
+      <div className='pinnedTabs'>
+        {
           this.props.frames
             .filter(frameProps => frameProps.get('isPinned'))
             .map(frameProps =>
-                <Tab activeDraggedTab={this.props.tabs.get('activeDraggedTab')}
-                  frameProps={frameProps}
-                  frames={this.props.frames}
-                  key={'tab-' + frameProps.get('key')}
-                  isActive={this.props.activeFrame === frameProps}
-                  isPrivate={frameProps.get('isPrivate')}
-                  partOfFullPageSet={this.props.partOfFullPageSet}/>)
+              <Tab
+                activeDraggedTab={this.props.tabs.get('activeDraggedTab')}
+                frameProps={frameProps}
+                frames={this.props.frames}
+                key={'tab-' + frameProps.get('key')}
+                isActive={this.props.activeFrame === frameProps}
+                isPrivate={frameProps.get('isPrivate')}
+                partOfFullPageSet={this.props.partOfFullPageSet}
+              />)
       }
-    </div>
+      </div>
+    )
   }
 }
 

@@ -2,6 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable react/jsx-handler-names -- 2016 React idioms, kept rather than rewriting working components */
+
+import Config from '../constants/config.js'
+
 const React = require('react')
 
 const ImmutableComponent = require('./immutableComponent')
@@ -12,8 +16,6 @@ const FrameStateUtil = require('../state/frameStateUtil')
 
 const Button = require('./button')
 const Tab = require('./tab')
-
-import Config from '../constants/config.js'
 
 class Tabs extends ImmutableComponent {
   get activeFrameIndex () {
@@ -36,39 +38,48 @@ class Tabs extends ImmutableComponent {
 
   get totalPages () {
     return Math.ceil(this.props.frames
-        .filter(frame => !frame.get('isPinned'))
-        .size / Config.tabs.tabsPerPage)
+      .filter(frame => !frame.get('isPinned'))
+      .size / Config.tabs.tabsPerPage)
   }
 
   render () {
-    return <div className='tabs'>
-      <span
-        className='prevTab fa fa-angle-left'
-        disabled={this.props.tabPageIndex === 0}
-        onClick={this.onPrevPage.bind(this)} />
+    return (
+      <div className='tabs'>
+        <span
+          className='prevTab fa fa-angle-left'
+          disabled={this.props.tabPageIndex === 0}
+          onClick={this.onPrevPage.bind(this)}
+        />
         <span className='tabContainer'>
-        {
+          {
           this.props.currentFrames
             .filter(frameProps => !frameProps.get('isPinned'))
             .map(frameProps =>
-                <Tab activeDraggedTab={this.props.tabs.get('activeDraggedTab')}
-                  frameProps={frameProps}
-                  frames={this.props.frames}
-                  key={'tab-' + frameProps.get('key')}
-                  isActive={this.props.activeFrame === frameProps}
-                  isPrivate={frameProps.get('isPrivate')}
-                  partOfFullPageSet={this.props.partOfFullPageSet}/>)
+              <Tab
+                activeDraggedTab={this.props.tabs.get('activeDraggedTab')}
+                frameProps={frameProps}
+                frames={this.props.frames}
+                key={'tab-' + frameProps.get('key')}
+                isActive={this.props.activeFrame === frameProps}
+                isPrivate={frameProps.get('isPrivate')}
+                partOfFullPageSet={this.props.partOfFullPageSet}
+              />)
         }
-        { !this.props.partOfFullPageSet && this.props.currentFrames.size !== 0
-        ? <Button label='+'
-          className='navbutton newFrameButton'
-          onClick={WindowActions.newFrame} /> : null }
+          {!this.props.partOfFullPageSet && this.props.currentFrames.size !== 0
+            ? <Button
+                label='+'
+                className='navbutton newFrameButton'
+                onClick={WindowActions.newFrame}
+              />
+            : null}
         </span>
-      <span
-        className='nextTab fa fa-angle-right'
-        disabled={this.props.tabPageIndex + 1 === this.totalPages || this.totalPages === 0}
-        onClick={this.onNextPage.bind(this)} />
-    </div>
+        <span
+          className='nextTab fa fa-angle-right'
+          disabled={this.props.tabPageIndex + 1 === this.totalPages || this.totalPages === 0}
+          onClick={this.onNextPage.bind(this)}
+        />
+      </div>
+    )
   }
 }
 

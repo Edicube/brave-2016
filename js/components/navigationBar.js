@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable react/no-string-refs -- 2016 React idioms, kept rather than rewriting working components */
+
 const React = require('react')
 const ImmutableComponent = require('./immutableComponent')
 
@@ -9,14 +11,13 @@ const cx = require('../lib/classSet.js')
 const Button = require('./button')
 const UrlBar = require('./urlBar')
 const AppActions = require('../actions/appActions')
-const {isSiteInList} = require('../state/siteUtil')
+const { isSiteInList } = require('../state/siteUtil')
 const SiteTags = require('../constants/siteTags')
 const Bridge = require('../lib/bridge')
 const messages = require('../constants/messages')
 const ipc = Bridge.ipc
 
 class NavigationBar extends ImmutableComponent {
-
   get loading () {
     return this.props.activeFrame &&
       this.props.activeFrame.get('loading')
@@ -61,54 +62,67 @@ class NavigationBar extends ImmutableComponent {
 
   componentDidUpdate (prevProps) {
     // Update the app menu to reflect whether the current page is bookmarked
-    var prevBookmarked = prevProps.activeFrame &&
+    const prevBookmarked = prevProps.activeFrame &&
       isSiteInList(prevProps.sites, prevProps.activeFrame.get('location'), SiteTags.BOOKMARK)
     if (this.bookmarked !== prevBookmarked) {
-      ipc.send(messages.UPDATE_APP_MENU, {bookmarked: this.bookmarked})
+      ipc.send(messages.UPDATE_APP_MENU, { bookmarked: this.bookmarked })
     }
   }
 
   render () {
-    let frameProps = this.props.activeFrame
+    const frameProps = this.props.activeFrame
     if (!frameProps) {
       return null
     }
 
-    return <div id='navigator'
+    return (
+      <div
+        id='navigator'
         ref='navigator'
         data-frame-key={frameProps.get('key')}
         className={cx({
           loading: this.loading,
           bookmarked: this.bookmarked,
           titleMode: this.titleMode
-        })}>
-      <div className='startButtons'>
-        <Button iconClass='fa-repeat'
-          className='navbutton reload-button'
-          onClick={this.onReload.bind(this)} />
-        <Button iconClass='fa-times'
-          className='navbutton stop-button'
-          onClick={this.onStop.bind(this)} />
-      </div>
-      <UrlBar ref='urlBar'
-        sites={this.props.sites}
-        activeFrameProps={frameProps}
-        searchDetail={this.props.searchDetail}
-        searchSuggestions={this.props.searchSuggestions}
-        frames={this.props.frames}
-        loading={this.loading}
-        titleMode={this.titleMode}
-        urlbar={this.props.navbar.get('urlbar')}
+        })}
+      >
+        <div className='startButtons'>
+          <Button
+            iconClass='fa-repeat'
+            className='navbutton reload-button'
+            onClick={this.onReload.bind(this)}
+          />
+          <Button
+            iconClass='fa-times'
+            className='navbutton stop-button'
+            onClick={this.onStop.bind(this)}
+          />
+        </div>
+        <UrlBar
+          ref='urlBar'
+          sites={this.props.sites}
+          activeFrameProps={frameProps}
+          searchDetail={this.props.searchDetail}
+          searchSuggestions={this.props.searchSuggestions}
+          frames={this.props.frames}
+          loading={this.loading}
+          titleMode={this.titleMode}
+          urlbar={this.props.navbar.get('urlbar')}
         />
-      <div className='endButtons'>
-        <Button iconClass='fa-star-o'
-          className='navbutton bookmark-button'
-          onClick={this.onAddBookmark.bind(this)} />
-        <Button iconClass='fa-star-o'
-          className='navbutton remove-bookmark-button'
-          onClick={this.onRemoveBookmark.bind(this)} />
+        <div className='endButtons'>
+          <Button
+            iconClass='fa-star-o'
+            className='navbutton bookmark-button'
+            onClick={this.onAddBookmark.bind(this)}
+          />
+          <Button
+            iconClass='fa-star-o'
+            className='navbutton remove-bookmark-button'
+            onClick={this.onRemoveBookmark.bind(this)}
+          />
+        </div>
       </div>
-    </div>
+    )
   }
 }
 

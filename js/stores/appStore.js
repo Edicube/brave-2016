@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable no-case-declarations -- the 2016 stores declare per-case locals throughout; a switch in braces per case is a larger rewrite */
+
 'use strict'
 const AppConstants = require('../constants/appConstants')
 const SiteUtil = require('../state/siteUtil')
@@ -31,7 +33,7 @@ function navbarHeight () {
 }
 
 const createWindow = (browserOpts, defaults) => {
-  let parentWindowKey = browserOpts.parentWindowKey
+  const parentWindowKey = browserOpts.parentWindowKey
 
   browserOpts.width = firstDefinedValue(browserOpts.width, browserOpts.innerWidth, defaults.width)
   // height and innerHeight are the frame webview size
@@ -49,14 +51,14 @@ const createWindow = (browserOpts, defaults) => {
   delete browserOpts.left
   delete browserOpts.top
 
-  let screen = electron.screen
-  let primaryDisplay = screen.getPrimaryDisplay()
-  let parentWindow = parentWindowKey ? BrowserWindow.fromId(parentWindowKey) : BrowserWindow.getFocusedWindow()
-  let bounds = parentWindow ? parentWindow.getBounds() : primaryDisplay.bounds
+  const screen = electron.screen
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const parentWindow = parentWindowKey ? BrowserWindow.fromId(parentWindowKey) : BrowserWindow.getFocusedWindow()
+  const bounds = parentWindow ? parentWindow.getBounds() : primaryDisplay.bounds
 
   // position on screen should be relative to focused window
   // or the primary display if there is no focused window
-  let display = screen.getDisplayNearestPoint(bounds)
+  const display = screen.getDisplayNearestPoint(bounds)
 
   // if no parentWindow, x, y or center is defined then go ahead
   // and center it if it's smaller than the display width
@@ -80,16 +82,16 @@ const createWindow = (browserOpts, defaults) => {
 
     // make sure the browser won't be outside the viewable area of any display
     // negative numbers aren't allowed so we don't need to worry about that
-    let displays = screen.getAllDisplays()
-    let maxX = Math.max(...displays.map((display) => { return display.bounds.x + display.bounds.width }))
-    let maxY = Math.max(...displays.map((display) => { return display.bounds.y + display.bounds.height }))
+    const displays = screen.getAllDisplays()
+    const maxX = Math.max(...displays.map((display) => { return display.bounds.x + display.bounds.width }))
+    const maxY = Math.max(...displays.map((display) => { return display.bounds.y + display.bounds.height }))
 
     browserOpts.x = Math.min(browserOpts.x, maxX - defaults.windowOffset)
     browserOpts.y = Math.min(browserOpts.y, maxY - defaults.windowOffset)
   }
 
-  var minWidth = isModal(browserOpts) ? defaults.minModalWidth : defaults.minWidth
-  var minHeight = isModal(browserOpts) ? defaults.minModalHeight : defaults.minHeight
+  const minWidth = isModal(browserOpts) ? defaults.minModalWidth : defaults.minWidth
+  const minHeight = isModal(browserOpts) ? defaults.minModalHeight : defaults.minHeight
 
   // min width and height don't seem to work when the window is first created
   browserOpts.width = browserOpts.width < minWidth ? minWidth : browserOpts.width
@@ -181,7 +183,10 @@ function windowDefaults () {
       // stated explicitly so the secure posture does not depend on defaults
       allowRunningInsecureContent: false,
       experimentalFeatures: false,
-      enableBlinkFeatures: ''
+      enableBlinkFeatures: '',
+      // BRAVE_HIDDEN keeps windows off screen (tools/e2e.js); a hidden window
+      // would otherwise be throttled like a background tab
+      backgroundThrottling: !process.env.BRAVE_HIDDEN
     }
   }
 }
@@ -191,8 +196,8 @@ function windowDefaults () {
  * haven't been initialized yet
  */
 function setDefaultWindowSize () {
-  let screen = electron.screen
-  let primaryDisplay = screen.getPrimaryDisplay()
+  const screen = electron.screen
+  const primaryDisplay = screen.getPrimaryDisplay()
   if (!appState.get('defaultWindowWidth') && !appState.get('defaultWindowHeight')) {
     appState = appState.set('defaultWindowWidth', Math.floor(primaryDisplay.bounds.width / 2))
     appState = appState.set('defaultWindowHeight', Math.floor(primaryDisplay.bounds.height / 2))
@@ -211,14 +216,14 @@ const handleAppAction = (action) => {
       const frameOpts = action.frameOpts && action.frameOpts.toJS()
       const browserOpts = (action.browserOpts && action.browserOpts.toJS()) || {}
 
-      let mainWindow = createWindow(browserOpts, windowDefaults())
+      const mainWindow = createWindow(browserOpts, windowDefaults())
       if (action.restoredState) {
         mainWindow.webContents.once('dom-ready', () => {
           mainWindow.webContents.send('restore-state', action.restoredState)
         })
       }
 
-      let currentWindows = appState.get('windows')
+      const currentWindows = appState.get('windows')
       appState = appState.set('windows', currentWindows.push(mainWindow.id))
 
       // initialize frames state
@@ -241,13 +246,15 @@ const handleAppAction = (action) => {
       mainWindow.loadURL(UiProtocol.url(page))
       appStore.emitChange()
 
-      mainWindow.show()
+      if (!process.env.BRAVE_HIDDEN) {
+        mainWindow.show()
+      }
       break
     case AppConstants.APP_CLOSE_WINDOW:
-      let appWindow = BrowserWindow.fromId(action.appWindowId)
+      const appWindow = BrowserWindow.fromId(action.appWindowId)
       appWindow.close()
 
-      let windows = appState.get('windows')
+      const windows = appState.get('windows')
       appState = appState.set('windows', windows.delete(action.appWindowId))
       appStore.emitChange()
       break

@@ -1,0 +1,56 @@
+# Every push and pull request: lint, unit tests, and the end-to-end security
+# checks against the real browser. Weekly: the same, plus `npm run doctor`, so
+# an Electron major going out of support or a new advisory turns the badge red
+# even when nobody has pushed anything.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npm run verify-fuses
+      - run: npm run lint
+      - run: npm test
+      - name: Display and sandbox for Electron
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb
+          # Chromium's setuid sandbox helper has to be root-owned 4755
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+      - name: End-to-end security checks
+        run: xvfb-run -a npm run e2e
+
+  doctor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npm run doctor

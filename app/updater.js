@@ -22,21 +22,21 @@ const updateLogPath = path.join(app.getPath('userData'), 'updateLog.log')
 
 // in built mode console.log output is not emitted to the terminal
 // in prod mode we pipe to a file
-var debug = function (contents) {
+const debug = function (contents) {
   // the callback was optional in Node 5, it is required now
   fs.appendFile(updateLogPath, new Date().toISOString() + ' - ' + contents + '\n', () => {})
 }
 
 // this maps the result of a call to process.platform to an update API identifier
-var platforms = {
-  'darwin': 'osx',
-  'win32': 'winx64'
+const platforms = {
+  darwin: 'osx',
+  win32: 'winx64'
 }
 
 // We are storing this as a package variable because a number of functions need access
 // It is set in the init function
-var platformBaseUrl = null
-var version = null
+let platformBaseUrl = null
+let version = null
 
 // build the complete update url from the base, platform and version
 exports.updateUrl = function (updates, platform) {
@@ -50,7 +50,7 @@ exports.updateUrl = function (updates, platform) {
 }
 
 // Setup schedule for periodic and startup update checks
-var scheduleUpdates = () => {
+const scheduleUpdates = () => {
   // Periodic check
   if (AppConfig.updates.appUpdateCheckFrequency) {
     setInterval(() => {
@@ -82,7 +82,7 @@ exports.init = (platform, ver) => {
     return
   }
 
-  var baseUrl = exports.updateUrl(AppConfig.updates, platform)
+  const baseUrl = exports.updateUrl(AppConfig.updates, platform)
   debug('updateUrl = ' + baseUrl)
 
   scheduleUpdates()
@@ -103,9 +103,9 @@ const secondsPerMonth = secondsPerDay * 30
 // This is a privacy preserving policy. Instead of passing personally identifying
 // information, the browser will pass the three boolean values indicating when the last
 // update check occurred.
-var paramsFromLastCheckDelta = (seconds) => {
+const paramsFromLastCheckDelta = (seconds) => {
   // Default params
-  var params = {
+  const params = {
     daily: false,
     weekly: false,
     monthly: false
@@ -140,23 +140,23 @@ var paramsFromLastCheckDelta = (seconds) => {
 }
 
 // Make a request to the update server to retrieve meta data
-var requestVersionInfo = (done) => {
+const requestVersionInfo = (done) => {
   if (!platformBaseUrl) throw new Error('platformBaseUrl not set')
 
   // Get the timestamp of the last update request
-  var lastCheckTimestamp = AppStore.getState().toJS().updates['lastCheckTimestamp'] || 0
+  const lastCheckTimestamp = AppStore.getState().toJS().updates.lastCheckTimestamp || 0
   debug(`lastCheckTimestamp = ${lastCheckTimestamp}`)
 
   // Calculate the number of seconds since the last update
-  var secondsSinceLastCheck = 0
+  let secondsSinceLastCheck = 0
   if (lastCheckTimestamp) {
     secondsSinceLastCheck = Math.round(((new Date()).getTime() - lastCheckTimestamp) / 1000)
   }
   debug(`secondsSinceLastCheck = ${secondsSinceLastCheck}`)
 
   // Build query string based on the number of seconds since last check
-  var query = paramsFromLastCheckDelta(secondsSinceLastCheck)
-  var queryString = `${platformBaseUrl}?${querystring.stringify(query)}`
+  const query = paramsFromLastCheckDelta(secondsSinceLastCheck)
+  const queryString = `${platformBaseUrl}?${querystring.stringify(query)}`
   debug(queryString)
 
   request(queryString, (err, response, body) => {
@@ -193,7 +193,7 @@ var requestVersionInfo = (done) => {
   })
 }
 
-var downloadHandler = (err, metadata) => {
+const downloadHandler = (err, metadata) => {
   assert.equal(err, null)
   debug('Metadata: ' + JSON.stringify(metadata))
   AppActions.setUpdateStatus(undefined, undefined, Immutable.fromJS(metadata))

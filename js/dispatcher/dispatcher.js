@@ -3,7 +3,6 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 class Dispatcher {
-
   constructor () {
     this.callbacks = []
     this.promises = []
@@ -25,8 +24,8 @@ class Dispatcher {
    */
   dispatch (payload) {
     // First create array of promises for callbacks to reference.
-    var resolves = []
-    var rejects = []
+    const resolves = []
+    const rejects = []
     this.promises = this.callbacks.map(function (_, i) {
       return new Promise(function (resolve, reject) {
         resolves[i] = resolve

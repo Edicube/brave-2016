@@ -1,6 +1,8 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* eslint-disable n/no-callback-literal, n/no-deprecated-api -- disabled 2016 feature, kept as it was */
 'use strict'
 
 const fs = require('fs')
@@ -13,13 +15,13 @@ const electron = require('electron')
 const session = electron.session
 
 let httpsEverywhereInitialized = false
-var dbLoaded = false
-var db = null
-var targets = null
+let dbLoaded = false
+let db = null
+let targets = null
 // Counter for detecting infinite redirect loops
-var redirectCounter = {}
+const redirectCounter = {}
 // Blacklist of canonicalized hosts (host+pathname) that lead to redirect loops
-var redirectBlacklist = []
+const redirectBlacklist = []
 
 module.exports.resourceName = 'httpsEverywhere'
 
@@ -47,8 +49,8 @@ function loadRulesets (dirname) {
  */
 function getRewrittenUrl (url, cb) {
   // Get the set of ruleset IDs applicable to this host
-  var rulesetIds = getHostnamePatterns(url).reduce((prev, hostname) => {
-    var target = targets[hostname]
+  const rulesetIds = getHostnamePatterns(url).reduce((prev, hostname) => {
+    const target = targets[hostname]
     return target ? prev.concat(target) : prev
   }, [])
 
@@ -80,15 +82,15 @@ function getRewrittenUrl (url, cb) {
  * @return {Array.<string>}
  */
 function getHostnamePatterns (url) {
-  var host = urlParse(url).hostname
-  var segmented = host.split('.')
-  var hostPatterns = [host]
+  const host = urlParse(url).hostname
+  const segmented = host.split('.')
+  const hostPatterns = [host]
 
   // Since targets can contain a single wildcard, replace each label of the
   // hostname with "*" in turn.
   segmented.forEach((label, index) => {
     // copy the original array
-    var tmp = segmented.slice()
+    const tmp = segmented.slice()
     if (label.length === 0) {
       console.log('got host with 0-length label', url)
     } else {
@@ -98,7 +100,7 @@ function getHostnamePatterns (url) {
   })
   // Now eat away from the left with * so that for x.y.z.google.com we also
   // check *.z.google.com and *.google.com.
-  for (var i = 2; i <= segmented.length - 2; ++i) {
+  for (let i = 2; i <= segmented.length - 2; ++i) {
     hostPatterns.push('*.' + segmented.slice(i, segmented.length).join('.'))
   }
   return hostPatterns
@@ -111,8 +113,8 @@ function getHostnamePatterns (url) {
  * @param {function(Error)} errback error callback
  */
 function loadRulesetsById (rulesetIds, cb, errback) {
-  var ids = JSON.stringify(rulesetIds).replace('[', '(').replace(']', ')')
-  var queryForRuleset = 'select contents from rulesets where id in ' + ids
+  const ids = JSON.stringify(rulesetIds).replace('[', '(').replace(']', ')')
+  const queryForRuleset = 'select contents from rulesets where id in ' + ids
   if (!dbLoaded || db === null) {
     // This request occurred before the db finished loading
     console.log('got request that occurred before HTTPS Everywhere loaded')
@@ -120,7 +122,7 @@ function loadRulesetsById (rulesetIds, cb, errback) {
     return
   }
   db.all(queryForRuleset, function (err, rows) {
-    var applicableRules
+    let applicableRules
     try {
       applicableRules = rows.map(item => { return JSON.parse(item.contents) })
     } catch (e) {
@@ -143,7 +145,7 @@ function loadRulesetsById (rulesetIds, cb, errback) {
  * @return {string}
  */
 function applyRulesets (url, cb, applicableRules) {
-  var i, j, ruleset, exclusion, rule, fromPattern, newUrl, exclusionPattern
+  let i, j, ruleset, exclusion, rule, fromPattern, newUrl, exclusionPattern
   for (j = 0; j < applicableRules.length; ++j) {
     ruleset = applicableRules[j].ruleset
     // If the rule is default_off or has a specified platform, ignore it.
@@ -212,7 +214,7 @@ function onBeforeRedirect (details) {
     return
   }
 
-  var canonicalUrl = canonicalizeUrl(details.url)
+  let canonicalUrl = canonicalizeUrl(details.url)
   if (details.id in redirectCounter) {
     canonicalUrl = canonicalizeUrl(details.url)
     redirectCounter[details.id] += 1
@@ -232,7 +234,7 @@ function onBeforeRedirect (details) {
  * @return {string}
  */
 function canonicalizeUrl (url) {
-  var parsed = urlParse(url)
+  const parsed = urlParse(url)
   return [parsed.host, parsed.pathname].join('/')
 }
 
@@ -246,7 +248,7 @@ function registerForSession (session) {
     console.log('could not get window session')
     return null
   }
-  var wr = session.webRequest
+  const wr = session.webRequest
   if (!wr) {
     console.log('could not get session webRequest')
     return null
@@ -272,4 +274,3 @@ module.exports.init = () => {
   registerForSession(session.fromPartition(Partitions.web))
   registerForSession(session.fromPartition(Partitions.private))
 }
-

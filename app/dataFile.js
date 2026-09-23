@@ -7,14 +7,13 @@
 const request = require('./lib/request')
 const fs = require('fs')
 const path = require('path')
-const urlParse = require('url').parse
 const app = require('electron').app
 const AppConfig = require('../js/constants/appConfig')
 const AppActions = require('../js/actions/appActions')
 const cachedDataFiles = {}
 
 const storagePath = (url) => {
-  const base = path.basename(urlParse(url).pathname)
+  const base = path.basename(new URL(url).pathname)
   // The URLs come from appConfig, but a basename of '..' or one carrying
   // separators would write outside the profile directory. Refuse those.
   if (!base || base === '.' || base === '..') {
@@ -58,7 +57,7 @@ function downloadSingleFile (resourceName, url, version, force, resolve, reject)
       return
     }
 
-    const etag = response.headers['etag']
+    const etag = response.headers.etag
     AppActions.setResourceETag(resourceName, etag)
 
     // console.log('setting dwonloadPath...', resourceName)
@@ -90,7 +89,7 @@ module.exports.downloadDataFile = (resourceName, url, version, force) => {
   if (resourceName === 'httpsEverywhere') {
     return new Promise((resolve, reject) => {
       downloadSingleFile(resourceName, url, version, force, () => {
-        var targets = AppConfig[resourceName].targetsUrl.replace('{version}', version)
+        const targets = AppConfig[resourceName].targetsUrl.replace('{version}', version)
         downloadSingleFile(resourceName, targets, version, force, resolve, reject)
       }, reject)
     })
@@ -107,7 +106,7 @@ module.exports.readDataFile = (resourceName, url) => {
     return new Promise((resolve, reject) => {
       fs.stat(storagePath(url), function (err, stats) {
         if (err || !stats.isFile()) {
-          reject()
+          reject(new Error('no data file'))
         } else {
           resolve(app.getPath('userData'))
         }
@@ -118,7 +117,7 @@ module.exports.readDataFile = (resourceName, url) => {
       fs.readFile(storagePath(url), function (err, data) {
         if (err || !data || data.length === 0) {
           // console.log('rejecting for read for resource:', resourceName)
-          reject()
+          reject(new Error('no data file'))
         } else {
           // console.log('resolving for read for resource:', resourceName)
           resolve(data)
@@ -133,7 +132,7 @@ module.exports.shouldRedownloadFirst = (resourceName, version) => {
   const lastCheckDate = AppStore.getState().getIn([resourceName, 'lastCheckDate'])
   const lastCheckVersion = AppStore.getState().getIn([resourceName, 'lastCheckVersion'])
   return lastCheckVersion !== version ||
-    lastCheckDate && (new Date().getTime() - lastCheckDate) > AppConfig[resourceName].msBetweenRechecks
+    (lastCheckDate && (new Date().getTime() - lastCheckDate) > AppConfig[resourceName].msBetweenRechecks)
 }
 
 /**
@@ -163,15 +162,15 @@ module.exports.init = (resourceName, startExtension, onInitDone) => {
 
   const loadProcess = (resourceName, version) =>
     module.exports.readDataFile(resourceName, url)
-    .then(doneInit)
-    .catch(() => {
-      module.exports.downloadDataFile(resourceName, url, version, true)
-      .then(module.exports.readDataFile.bind(null, resourceName, url))
       .then(doneInit)
-      .catch((err) => {
-        console.log(`Could not init ${resourceName}`, err || '')
+      .catch(() => {
+        module.exports.downloadDataFile(resourceName, url, version, true)
+          .then(module.exports.readDataFile.bind(null, resourceName, url))
+          .then(doneInit)
+          .catch((err) => {
+            console.log(`Could not init ${resourceName}`, err || '')
+          })
       })
-    })
 
   if (module.exports.shouldRedownloadFirst(resourceName, version)) {
     module.exports.downloadDataFile(resourceName, url, version, false)
@@ -182,15 +181,5 @@ module.exports.init = (resourceName, startExtension, onInitDone) => {
   }
 }
 
-module.exports.debug = (resourceName, details, shouldBlock) => {
-  if (!shouldBlock) {
-    return
-  }
-  /*
-  console.log('-----')
-  console.log(`${resourceName} should block: `, shouldBlock)
-  console.log(details.url)
-  console.log(details.firstPartyUrl)
-  console.log(details.resourceType)
-  */
-}
+// Only ever printed commented-out logging; kept so callers need not change
+module.exports.debug = () => {}

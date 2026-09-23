@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* eslint-disable react/no-find-dom-node, react/no-string-refs -- 2016 React idioms, kept rather than rewriting working components */
+
 const React = require('react')
 const PropTypes = require('prop-types')
 const ReactDOM = require('react-dom')
@@ -32,13 +34,17 @@ class Dialog extends ImmutableComponent {
   }
 
   render () {
-    return <div className={'dialog ' + (this.props.className || '')}
-      tabIndex='-1'
-      ref='dialog'
-      onKeyDown={this.onKeyDown.bind(this)}
-      onClick={this.onClick.bind(this)}>
+    return (
+      <div
+        className={'dialog ' + (this.props.className || '')}
+        tabIndex='-1'
+        ref='dialog'
+        onKeyDown={this.onKeyDown.bind(this)}
+        onClick={this.onClick.bind(this)}
+      >
         {this.props.children}
-    </div>
+      </div>
+    )
   }
 }
 

@@ -12,7 +12,7 @@
 // so its warnings stay off.
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 
- // windows installation events etc...
+// windows installation events etc...
 if (process.platform === 'win32') {
   // TODO - register browser as HTTP handler in Windows (maybe need to fork)
   if (require('electron-squirrel-startup')) {
@@ -48,6 +48,7 @@ const SiteHacks = require('./siteHacks')
 const Phishing = require('./phishing')
 const HttpsUpgrade = require('./httpsUpgrade')
 const Staleness = require('./staleness')
+const UpdateCheck = require('./updateCheck')
 const CmdLine = require('./cmdLine')
 const WindowOpen = require('./windowOpen')
 const Security = require('./security')
@@ -98,12 +99,12 @@ app.on('login', (event, webContents, details, authInfo, callback) => {
   }
 })
 
-let loadAppStatePromise = SessionStore.loadAppState().catch(() => {
+const loadAppStatePromise = SessionStore.loadAppState().catch(() => {
   return SessionStore.defaultAppState()
 })
 
 // Used to collect the per window state when shutting down the application
-let perWindowState = []
+const perWindowState = []
 let sessionStateStoreAttempted = false
 
 const saveIfAllCollected = () => {
@@ -285,6 +286,7 @@ app.on('ready', function () {
     Phishing.init()
     HttpsUpgrade.init()
     Staleness.init()
+    UpdateCheck.init()
     WindowOpen.init()
 
     ipcMain.on(messages.UPDATE_REQUESTED, (e) => {

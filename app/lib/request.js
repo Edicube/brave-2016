@@ -46,7 +46,7 @@ function send (opts, out, cb, redirectCount) {
     method: opts.method || 'GET',
     headers: opts.headers || {}
   }, (res) => {
-    const location = res.headers['location']
+    const location = res.headers.location
     if (location && res.statusCode >= 300 && res.statusCode < 400) {
       if (redirectCount >= maxRedirects) {
         const err = new Error('too many redirects')
@@ -99,4 +99,4 @@ function send (opts, out, cb, redirectCount) {
 
 module.exports = doRequest
 module.exports.get = (options, cb) => doRequest(Object.assign(
-  typeof options === 'string' ? {url: options} : options, {method: 'GET'}), cb)
+  typeof options === 'string' ? { url: options } : options, { method: 'GET' }), cb)
