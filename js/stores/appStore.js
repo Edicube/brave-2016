@@ -15,6 +15,7 @@ const firstDefinedValue = require('../lib/functional').firstDefinedValue
 const Serializer = require('../dispatcher/serializer')
 const path = require('path')
 const UiProtocol = require('../../app/uiProtocol')
+const InitialState = require('../../app/initialState')
 
 let appState
 
@@ -230,15 +231,14 @@ const handleAppAction = (action) => {
         }
       }
 
-      // pass the appState and frames into the query string for initialization
-      // This seems kind of hacky, maybe there is a better way to make
-      // sure that the Window has the app state before it renders?
-      let queryString =
-        'appState=' + encodeURIComponent(JSON.stringify(appState.toJS())) +
-        '&frames=' + encodeURIComponent(JSON.stringify(frames))
+      // The window's preload collects this over IPC before the UI renders
+      InitialState.set(mainWindow.webContents.id, {
+        appState: appState.toJS(),
+        frames
+      })
 
       const page = process.env.NODE_ENV === 'development' ? 'index-dev.html' : 'index.html'
-      mainWindow.loadURL(UiProtocol.url(page) + '?' + queryString)
+      mainWindow.loadURL(UiProtocol.url(page))
       appStore.emitChange()
 
       mainWindow.show()

@@ -17,6 +17,7 @@ const BrowserWindow = electron.BrowserWindow
 const path = require('path')
 const messages = require('../js/constants/messages')
 const UiProtocol = require('./uiProtocol')
+const InitialState = require('./initialState')
 
 const debug = (...args) => {
   if (process.env.BRAVE_DEBUG) {
@@ -58,8 +59,11 @@ const menuItemKeys = {
 
 // Menus are built from renderer-supplied data in the main process, so a
 // template with absurd nesting or size has to be refused rather than walked.
-const maxMenuDepth = 10
-const maxMenuItems = 500
+// The real menus are under 20 items and at most one level deep. The limits
+// are on the whole tree, not per level: 500 items at each of 10 levels would
+// still let a compromised renderer ask for millions of native menu items.
+const maxMenuDepth = 3
+const maxMenuItems = 100
 
 /**
  * Rebuilds a menu template from scratch, keeping only known keys with sane
@@ -69,41 +73,64 @@ const maxMenuItems = 500
  * @param {number} menuId
  * @param {number} depth recursion level
  */
-function buildTemplate (template, sender, menuId, depth) {
-  if (!Array.isArray(template) ||
-      depth > maxMenuDepth ||
-      template.length > maxMenuItems) {
+function buildTemplate (template, sender, menuId, depth, budget) {
+  budget = budget || { left: maxMenuItems }
+  depth = depth || 0
+  if (!Array.isArray(template) || depth > maxMenuDepth) {
     return []
   }
-  return template.map((item) => {
-    if (!item || typeof item !== 'object') {
-      return null
+  const built = []
+  for (const item of template) {
+    if (budget.left <= 0) {
+      break
     }
-    const built = {}
-    Object.keys(menuItemKeys).forEach((key) => {
-      const value = menuItemKeys[key](item[key])
-      if (value !== undefined) {
-        built[key] = value
-      }
-    })
-    if (Array.isArray(item.submenu)) {
-      built.submenu = buildTemplate(item.submenu, sender, menuId, depth + 1)
+    const one = buildItem(item, sender, menuId, depth, budget)
+    if (one) {
+      built.push(one)
     }
-    if (typeof item.menuItemId === 'number') {
-      const itemId = item.menuItemId
-      built.click = () => {
-        if (!sender.isDestroyed()) {
-          sender.send('bridge-menu-click', menuId, itemId)
-        }
-      }
-    }
-    return built
-  }).filter(Boolean).slice(0, maxMenuItems)
+  }
+  return built
 }
+
+function buildItem (item, sender, menuId, depth, budget) {
+  if (!item || typeof item !== 'object') {
+    return null
+  }
+  // claimed before recursing, so a parent cannot slip in after its children
+  // have already spent the budget
+  budget.left--
+  const built = {}
+  Object.keys(menuItemKeys).forEach((key) => {
+    const value = menuItemKeys[key](item[key])
+    if (value !== undefined) {
+      built[key] = value
+    }
+  })
+  if (Array.isArray(item.submenu)) {
+    built.submenu = buildTemplate(item.submenu, sender, menuId, depth + 1, budget)
+  }
+  if (Number.isSafeInteger(item.menuItemId)) {
+    const itemId = item.menuItemId
+    built.click = () => {
+      if (!sender.isDestroyed()) {
+        sender.send('bridge-menu-click', menuId, itemId)
+      }
+    }
+  }
+  return built
+}
+
+module.exports.buildTemplateForTest = buildTemplate
 
 module.exports.init = () => {
   ipcMain.on('bridge-app-path', (event) => {
     event.returnValue = isAppWindow(event.sender) ? app.getAppPath() : null
+  })
+
+  ipcMain.on('bridge-initial-state', (event) => {
+    event.returnValue = isAppWindow(event.sender)
+      ? InitialState.take(event.sender.id)
+      : null
   })
 
   ipcMain.on('bridge-window-id', (event) => {

@@ -12,6 +12,11 @@ const path = require('path')
 
 const root = path.join(__dirname, '..')
 const watch = process.argv.includes('--watch')
+// Production unless watching or asked otherwise: React's development build
+// runs extra checks on every render, and an unminified bundle is slower to
+// parse at every start.
+const mode = process.env.NODE_ENV || (watch ? 'development' : 'production')
+const production = mode === 'production'
 
 // Compiles the .less files that js/entry.js pulls in. esbuild has no less
 // loader, so hand it plain css and let it bundle that.
@@ -43,7 +48,8 @@ const options = {
   platform: 'browser',
   format: 'iife',
   target: 'chrome120',
-  sourcemap: true,
+  sourcemap: !production,
+  minify: production,
   logLevel: 'info',
   // JSX lives in plain .js files, the way babel-preset-react allowed
   loader: {
@@ -64,7 +70,7 @@ const options = {
     events: 'events'
   },
   define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    'process.env.NODE_ENV': JSON.stringify(mode),
     'process.env.BRAVE_DEBUG': JSON.stringify(process.env.BRAVE_DEBUG || ''),
     // this bundle is only ever the renderer half; the dispatcher branches on it
     'process.type': JSON.stringify('renderer')
@@ -91,12 +97,34 @@ const preloadOptions = {
   platform: 'node',
   format: 'cjs',
   target: 'chrome120',
-  sourcemap: true,
+  sourcemap: !production,
+  minify: production,
   logLevel: 'info',
   external: ['electron']
 }
 
+// Stamped into the build so the running browser can tell the user it has gone
+// stale. Deliberately offline: no update endpoint to phone, and none needed to
+// know how old this build is.
+function writeBuildInfo () {
+  const dir = path.join(root, 'app', 'gen')
+  fs.mkdirSync(dir, { recursive: true })
+  const electronVersion = (() => {
+    try {
+      return fs.readFileSync(
+        path.join(root, 'node_modules', 'electron', 'dist', 'version'), 'utf8').trim()
+    } catch (e) {
+      return 'unknown'
+    }
+  })()
+  fs.writeFileSync(path.join(dir, 'buildinfo.json'), JSON.stringify({
+    builtAt: new Date().toISOString(),
+    electron: electronVersion
+  }, null, 2) + '\n')
+}
+
 async function main () {
+  writeBuildInfo()
   if (watch) {
     const contexts = await Promise.all([
       esbuild.context(options),

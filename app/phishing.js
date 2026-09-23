@@ -28,21 +28,34 @@ const debug = (...args) => {
   }
 }
 
+// Only documents are checked: top level pages and frames. That is where
+// phishing happens - the fake login page itself - and where a malware
+// download starts. Matching these lists is also far slower than the ad lists
+// (about 1.8ms a request against 20us), so running it on every image and
+// script would cost a busy page a noticeable fraction of a second.
+const documentTypes = new Set(['mainFrame', 'subFrame'])
+
 function checkRequest (details) {
-  if (!engine) {
+  if (!engine || !documentTypes.has(details.resourceType)) {
     return undefined
   }
 
   const isTopLevel = details.resourceType === 'mainFrame'
-  const matched = engine.match(FilterEngine.Request.fromRawDetails({
+  const result = engine.match(FilterEngine.Request.fromRawDetails({
     url: details.url,
     sourceUrl: isTopLevel ? details.url : details.firstPartyUrl || details.url,
     type: FilterEngine.requestType(details)
-  })).match
+  }))
 
-  if (!matched) {
+  if (!result.match) {
     return undefined
   }
+
+  // shown on the warning page, so a false positive can at least be judged
+  let rule = ''
+  try {
+    rule = result.filter ? String(result.filter.toString()).slice(0, 160) : ''
+  } catch (e) {}
 
   debug(`blocked ${details.resourceType} ${details.url}`)
 
@@ -51,7 +64,8 @@ function checkRequest (details) {
     // warning instead. Deferred because the navigation is still unwinding.
     const target = webContents.fromId(details.webContentsId)
     if (target && !target.isDestroyed()) {
-      const warning = Security.blockedPageUrl(details.url)
+      const warning = Security.blockedPageUrl(details.url, 'phishing',
+        rule ? 'matched rule: ' + rule : undefined)
       setImmediate(() => {
         if (!target.isDestroyed()) {
           target.loadURL(warning).catch(() => {})

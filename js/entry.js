@@ -13,7 +13,6 @@ require('../less/dialogs.less')
 require('../less/updateBar.less')
 require('../node_modules/font-awesome/css/font-awesome.css')
 
-const URL = require('url')
 const React = require('react')
 const ReactDOM = require('react-dom')
 const Window = require('./components/window')
@@ -28,9 +27,12 @@ if (process.env.BRAVE_DEBUG) {
 }
 
 // get appStore from url
-var queryString = URL.parse(window.location.href, true).query
-var appState = JSON.parse(queryString.appState)
-var frames = JSON.parse(queryString.frames)
+// handed over by the main process through the window preload
+// Values that cross contextBridge arrive frozen, and the 2016 stores mutate
+// what they are given, so work on a copy.
+var initial = JSON.parse(JSON.stringify(window.braveBridge.initialState || {}))
+var appState = initial.appState || { windows: [], sites: [], visits: [] }
+var frames = initial.frames || []
 
 ipc.on(messages.REQUEST_WINDOW_STATE, () => {
   ipc.send(messages.RESPONSE_WINDOW_STATE, WindowStore.getState().toJS())

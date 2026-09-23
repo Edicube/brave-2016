@@ -49,6 +49,12 @@ module.exports = {
     // through a third party.
     enabled: true
   },
+  staleness: {
+    // How old a build may get before the person using it is warned. The
+    // auto-updater is inert, so nothing else would ever say so.
+    maxAgeInDays: 45,
+    enabled: true
+  },
   siteHacks: {
     enabled: true
   },

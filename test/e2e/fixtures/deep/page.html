@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>e2e page</title></head><body>
+<h1>e2e page</h1>
+<img id="cross" width="1" height="1">
+<script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script src="https://www.google-analytics.com/analytics.js"></script>
+<script>
+  // loaded from a second local port, which counts as another site
+  document.getElementById('cross').src = 'http://127.0.0.1:' + (Number(location.port) + 1) + '/pixel.png'
+  window.probe = function (target) { try { window.open(target, '_blank'); return 'called' } catch (e) { return 'threw' } }
+</script>
+</body></html>

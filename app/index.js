@@ -23,7 +23,9 @@ if (process.platform === 'win32') {
 // The product is called Brave 2016, but the profile directory keeps the name
 // it has always had, so a rename does not orphan anyone's session, cookies
 // and filter engines. Has to run before anything reads userData.
-require('electron').app.setPath('userData',
+// BRAVE_PROFILE_DIR points it elsewhere, which is how tools/e2e.js runs a
+// throwaway profile alongside a browser that is already open.
+require('electron').app.setPath('userData', process.env.BRAVE_PROFILE_DIR ||
   require('path').join(require('electron').app.getPath('appData'), 'brave'))
 
 const Immutable = require('immutable')
@@ -45,6 +47,7 @@ const HttpsEverywhere = require('./httpsEverywhere')
 const SiteHacks = require('./siteHacks')
 const Phishing = require('./phishing')
 const HttpsUpgrade = require('./httpsUpgrade')
+const Staleness = require('./staleness')
 const CmdLine = require('./cmdLine')
 const WindowOpen = require('./windowOpen')
 const Security = require('./security')
@@ -281,6 +284,7 @@ app.on('ready', function () {
     SiteHacks.init()
     Phishing.init()
     HttpsUpgrade.init()
+    Staleness.init()
     WindowOpen.init()
 
     ipcMain.on(messages.UPDATE_REQUESTED, (e) => {

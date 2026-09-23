@@ -3,21 +3,40 @@
   <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy"
-          content="default-src 'none'; script-src 'self'; style-src 'self'">
+          content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'">
     <title>Blocked</title>
-    <link rel="stylesheet" href="blocked.css">
+    <style>
+      body {
+        margin: 0;
+        font: 15px/1.55 system-ui, sans-serif;
+        color: #2b2b2b;
+        background: #f6f5f4;
+        display: flex;
+        justify-content: center;
+        padding: 12vh 24px;
+      }
+      main { max-width: 34em; }
+      h1 { font-size: 1.5em; margin: 0 0 .6em; color: #a8271b; }
+      p { margin: 0 0 1em; }
+      code {
+        display: block;
+        margin: 0 0 1.4em;
+        padding: .7em .8em;
+        background: #e9e7e5;
+        border-radius: 4px;
+        font: 13px/1.5 ui-monospace, monospace;
+        overflow-wrap: anywhere;
+      }
+      .why { color: #5c5c5c; font-size: .93em; }
+      .why code { display: inline; padding: .1em .3em; margin: 0; }
+    </style>
   </head>
   <body>
     <main>
-      <h1>This site was blocked</h1>
-      <p>It appears on a phishing or malware blocklist, so Brave did not load it.</p>
+      <h1 id="heading">This site was blocked</h1>
+      <p id="summary">Brave did not load it.</p>
       <code id="url">the address is not available</code>
-      <p class="why">
-        Sites land on these lists for impersonating a login page, or for serving
-        malware. If you are certain this one is safe, the blocklist can be turned
-        off under <code>phishing</code> in js/constants/appConfig.js. There is
-        deliberately no button here to continue.
-      </p>
+      <p class="why" id="why"></p>
     </main>
     <script src="blocked.js"></script>
   </body>

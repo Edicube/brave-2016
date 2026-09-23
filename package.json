@@ -11,8 +11,11 @@
     "test": "node --test \"test/unit/*.test.js\"",
     "harden": "node ./tools/fuses.js",
     "verify-fuses": "node ./tools/fuses.js --verify",
-    "postinstall": "npm run harden && npm run verify-fuses",
-    "package": "npm run build && node ./tools/package.js"
+    "postinstall": "node ./tools/fuses.js",
+    "package": "npm run build && node ./tools/package.js",
+    "doctor": "node ./tools/doctor.js",
+    "e2e": "npm run build && node ./tools/e2e.js",
+    "verify-install": "sh ./tools/install-linux.sh --verify"
   },
   "repository": "brave/browser-laptop",
   "author": {
@@ -29,6 +32,7 @@
     "prop-types": "^15.8.1",
     "react": "^16.14.0",
     "react-dom": "^16.14.0",
+    "tldts-experimental": "^7.4.14",
     "url": "^0.11.4",
     "urlutil.js": "^0.1.1"
   },

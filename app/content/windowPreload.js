@@ -33,6 +33,8 @@ contextBridge.exposeInMainWorld('braveBridge', {
   // resolved once, at load, so the renderer never needs the app module
   appPath: ipcRenderer.sendSync('bridge-app-path'),
   windowId: ipcRenderer.sendSync('bridge-window-id'),
+  // the window's starting state, handed over once
+  initialState: ipcRenderer.sendSync('bridge-initial-state'),
 
   send (channel, ...args) {
     checkChannel(channel)

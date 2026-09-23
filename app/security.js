@@ -36,6 +36,12 @@ const allowedPermissions = new Set([
   'clipboard-sanitized-write'
 ])
 
+// Chromium's certificate errors occupy the -200 block of its net error codes
+const isCertificateError = (errorCode) => errorCode <= -200 && errorCode > -300
+
+// net::ERR_CERT_AUTHORITY_INVALID
+const CERT_AUTHORITY_INVALID = -202
+
 function registerPermissionHandlers (ses) {
   ses.setPermissionRequestHandler((webContents, permission, callback, details) => {
     const allowed = allowedPermissions.has(permission)
@@ -64,19 +70,31 @@ function registerPermissionHandlers (ses) {
 
   // TLS verification is never overridable from inside the app: this build has
   // no interstitial "proceed anyway" flow, so a failed verification can only
-  // ever mean refusal. Certificates Chromium accepts pass through untouched;
-  // everything else is rejected with -2, and there is no code path that can
-  // turn an error into an accept.
+  // ever mean refusal. Everything else is rejected with -2, and there is no
+  // code path that can turn an error into an accept.
+  //
+  // The accept path returns -3, not 0. In this API 0 means "success, and skip
+  // Certificate Transparency" - which would switch off the check that catches
+  // mis-issuance by an otherwise trusted CA. -3 means "use Chromium's own
+  // result", keeping every check it performs.
   ses.setCertificateVerifyProc((request, callback) => {
     // Electron reports a passing verification as 'net::OK' (the net error
     // code string), not plain 'OK'.
     if (request.verificationResult !== 'net::OK' || !request.isIssuedByKnownRoot) {
+      // Refuse with the real certificate error rather than a plain -2. A bare
+      // failure reaches did-fail-load as ERR_FAILED, which loses the reason
+      // and makes it indistinguishable from any other network problem, so the
+      // warning page could not tell the user what was actually wrong.
+      const code = isCertificateError(request.errorCode)
+        ? request.errorCode
+        // no specific code: the chain did not reach a root we trust
+        : CERT_AUTHORITY_INVALID
       debug(`refusing certificate for ${request.hostname}:`,
         request.verificationResult || `errorCode ${request.errorCode}`)
-      callback(-2)
+      callback(code)
       return
     }
-    callback(0)
+    callback(-3)
   })
 
   // No client certificate is ever offered to a server asking for mTLS.
@@ -148,8 +166,10 @@ module.exports.initEarly = () => {
       delete params.nodeintegration
       delete params.nodeintegrationinsubframes
       delete params.disablewebsecurity
-      delete params.allowpopups
       delete params.plugins
+      // Popups stay permitted so that setWindowOpenHandler is consulted at
+      // all; app/windowOpen.js refuses the native window in every case and
+      // decides what may become a tab.
       // A renderer must not be able to choose its own session, which would
       // escape the filtering and the file: refusal registered above.
       if (params.partition !== Partitions.private) {
@@ -174,12 +194,26 @@ module.exports.initEarly = () => {
       // WebRTC otherwise reveals local network addresses to any page
       contents.setWebRTCIPHandlingPolicy('default_public_interface_only')
 
-      // allowpopups is stripped at attach time; this denies the path anyway,
-      // in case a future Electron changes when that attribute is read.
-      contents.setWindowOpenHandler((details) => {
-        debug('blocked window.open from a webview:', details.url)
-        return { action: 'deny' }
-      })
+      // A refused certificate otherwise leaves a blank tab, which reads as
+      // "the browser is broken" and pushes people towards retrying over http.
+      contents.on('did-fail-load',
+        (e, errorCode, errorDescription, validatedUrl, isMainFrame) => {
+          debug(`did-fail-load main=${isMainFrame} code=${errorCode} ${errorDescription} ${validatedUrl}`)
+          if (!isMainFrame || !isCertificateError(errorCode)) {
+            return
+          }
+          const warning = module.exports.blockedPageUrl(
+            validatedUrl, 'certificate', errorDescription)
+          debug(`certificate failure on ${validatedUrl}: ${errorDescription}`)
+          setImmediate(() => {
+            if (!contents.isDestroyed()) {
+              contents.loadURL(warning).catch(() => {})
+            }
+          })
+        })
+
+      // window.open on a webview is owned by app/windowOpen.js, which denies
+      // the native window and turns an http(s) request into a tab.
 
       const guardWebviewNavigation = (e, target) => {
         let scheme
@@ -416,8 +450,19 @@ function refuseFileScheme (ses) {
  * Session scoped guards, which need the app to be ready. Sessions created
  * earlier are covered by the 'session-created' hook installed in initEarly().
  */
-module.exports.blockedPageUrl = (blockedTarget) =>
-  UiProtocol.url('blocked.html') + '#' + encodeURIComponent(blockedTarget)
+/**
+ * The URL of the warning page shown in place of a page that was refused.
+ * @param {string} blockedTarget the address that was refused
+ * @param {string} reason one of the keys understood by app/blocked.js
+ * @param {string=} detail extra text, e.g. a net error name
+ * @return {string}
+ */
+module.exports.blockedPageUrl = (blockedTarget, reason, detail) =>
+  UiProtocol.url('blocked.html') + '#' + encodeURIComponent(JSON.stringify({
+    url: blockedTarget,
+    reason: reason || 'unknown',
+    detail: detail
+  }))
 
 module.exports.init = () => {
   ;[Partitions.web, Partitions.private].forEach((partition) =>

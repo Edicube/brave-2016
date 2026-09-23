@@ -37,6 +37,10 @@ class Frame extends ImmutableComponent {
     this.webview = this.webview || document.createElement('webview')
     // Electron resolves webview preloads as absolute URLs now
     this.webview.setAttribute('preload', preloadUrl)
+    // Without this Chromium drops window.open before any handler is consulted,
+    // so target="_blank" links would do nothing at all. The native window is
+    // still refused in app/windowOpen.js, which decides what becomes a tab.
+    this.webview.setAttribute('allowpopups', '')
     this.webview.setAttribute('partition', this.props.frame.get('isPrivate')
       ? Partitions.private : Partitions.web)
     if (this.props.frame.get('guestInstanceId')) {

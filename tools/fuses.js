@@ -19,7 +19,6 @@ const { flipFuses, FuseVersion, FuseV1Options } = require('@electron/fuses')
 const path = require('path')
 const fs = require('fs')
 
-const verifyOnly = process.argv.includes('--verify')
 const binary = process.argv.find((arg, i) =>
   i > 1 && arg !== '--verify') ||
   path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron')
@@ -37,15 +36,14 @@ const fuses = {
   [FuseV1Options.GrantFileProtocolExtraPrivileges]: false
 }
 
-// Expected fuse wire, used by --verify. Every entry in `fuses` must read back
-// exactly as set, or the binary is treated as unhardened.
+// The fuse wire stores each fuse as the ASCII byte '0' or '1'; the reader hands
+// those back as their character codes. Normalise to booleans.
+const toBool = (value) => value === 49 || value === '1' || value === true
+
+// Every entry in `fuses` must read back exactly as set, or the binary is
+// treated as unhardened. Used by --verify and by `npm run doctor`.
 async function verify () {
   const { getCurrentFuseWire } = require('@electron/fuses')
-// The fuse wire stores each fuse as the ASCII byte '0' or '1'; the reader
-// hands those back as their character codes. Normalise to booleans.
-const toBool = (value) =>
-  value === 49 || value === '1' || value === true
-
   const wire = await getCurrentFuseWire(binary)
   let ok = true
   for (const key of Object.keys(fuses)) {
@@ -77,8 +75,9 @@ async function main () {
   }
 
   if (!fs.existsSync(binary)) {
-    console.error(`no electron binary at ${binary}`)
-    process.exit(1)
+    // runs from postinstall, where electron may not be unpacked yet
+    console.log('no electron binary yet; run `npm run harden` once it is installed')
+    return
   }
 
   if (process.argv.includes('--verify')) {

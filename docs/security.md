@@ -10,8 +10,8 @@ Neither renderer is privileged:
 
 | | Loads | node integration | context isolation | sandbox |
 | --- | --- | --- | --- | --- |
-| **Window** (the Brave UI) | only `file://` inside the app directory | no | yes | yes |
-| **Webview** (every web page) | anything | no | yes | yes |
+| **Window** (the Brave UI) | only `brave://ui/` | no | yes | yes |
+| **Webview** (every web page) | http, https | no | yes | yes |
 
 The window used to need node integration, because the 2016 components called
 `require()` and the remote module straight from the renderer. That turned out to
@@ -119,29 +119,155 @@ Three things make it narrow rather than just indirect:
   keys onto a fresh template and attaches its own click handlers that send the
   item id back. `downloadURL` is additionally restricted to `http` and `https`.
 
+## Beyond the renderers
+
+**The UI is not a `file://` document.** It is served over `brave://ui/`, a
+scheme registered as standard and secure, from a handler that resolves only
+inside `app/` and only for a fixed list of content types
+([app/uiProtocol.js](../app/uiProtocol.js)). Two things follow. The
+`GrantFileProtocolExtraPrivileges` fuse can be off, so script execution in the
+UI cannot read the disk through `fetch` - measured, it is refused. And `file:`
+can then be refused outright in every web content session, with no exception
+carved out for the app's own pages.
+
+**Web content has its own sessions.** Normal tabs use `persist:web`, private
+tabs an in-memory partition, and the UI the default session
+([js/constants/partitions.js](../js/constants/partitions.js)). The partition is
+pinned in `will-attach-webview`, so a renderer cannot pick its own session and
+step outside the filtering or the `file:` refusal.
+
+**`file:` is refused at the session, not at navigation.** `will-navigate` does
+not fire for navigations started by setting a webview's `src` or calling
+`loadURL`, so a guard there can be walked straight past - it was, during this
+work, and `/etc/passwd` loaded and was read. The scheme is now intercepted in
+the session, which catches every route to it.
+
+**Binary fuses are off** ([tools/fuses.js](../tools/fuses.js)). Without this the
+shipped Electron binary is a general purpose Node interpreter anything on the
+machine can call: `ELECTRON_RUN_AS_NODE=1 electron -e "..."`. Also closed:
+`NODE_OPTIONS` injection, the Node CLI inspector, and file protocol privileges.
+Cookie encryption is on. `npm install` rewrites the binary and resets these, so
+it is wired to `postinstall`, and `npm run verify-fuses` reads the wire back.
+
+**One process per profile.** `requestSingleInstanceLock` hands arguments to the
+running instance. Two processes sharing a profile corrupt each other's
+databases, which showed up as `Failed to initialize the DIPS SQLite database`.
+
+**Network layer.** TLS floored at 1.2, DNS over HTTPS in `secure` mode with no
+plaintext fallback, WebRTC restricted to the default public interface,
+cross-site referrers trimmed to the origin, third-party cookies dropped. The
+last two are what Brave itself does, and they break sign-in flows that federate
+through a third party.
+
+**Phishing and malware.** Electron has no Safe Browsing. Top level navigations
+are matched against the malware-filter phishing and URLhaus lists and replaced
+with a warning page ([app/phishing.js](../app/phishing.js)). There is
+deliberately no button to continue.
+
+**HTTPS first.** Top level `http` navigations are retried over `https`, with the
+hosts that genuinely cannot do TLS remembered. The fallback fires only on
+connection level failures, never on certificate errors: a site with a bad
+certificate does support TLS, and dropping to `http` there is exactly the
+downgrade an attacker would want.
+
+**Downloads are confirmed.** This version has no download UI, so a download used
+to complete silently. Executable extensions get a blunter warning.
+
+**One webRequest owner.** Electron allows a single listener per event per
+session and a second registration silently replaces the first. Everything
+registers through [app/filtering.js](../app/filtering.js) instead, which is the
+only module that touches `onBeforeRequest` and `onBeforeSendHeaders`. This was a
+real bug during the work: adding the HTTPS upgrade silently disabled phishing
+protection, and the privacy headers would have silently disabled ad blocking.
+
+**TLS verification cannot be overridden from inside the app.** There is no
+"proceed anyway" flow, so a failed verification only ever means refusal.
+`expired.badssl.com` is refused with `net::ERR_CERT_DATE_INVALID` and the tab
+stays where it was.
+
+Two details in that handler are worth knowing. The accept path returns `-3`, not
+`0`: in this API `0` means "success, and skip Certificate Transparency", which
+would switch off the check that catches mis-issuance by an otherwise trusted CA.
+And the handler additionally requires `isIssuedByKnownRoot`, which rejects
+certificates chaining to a privately installed root - so a corporate network
+doing TLS inspection, or a self-signed development certificate, will fail
+outright rather than prompt.
+
+**A page cannot choose what becomes a tab.** `window.open` is denied as a native
+window in every case; whether it becomes a tab is decided in
+[app/windowOpen.js](../app/windowOpen.js) against an http/https allowlist. This
+mattered: before the check, a page could open `brave://ui/index.html` - the
+browser's own privileged page - in a tab. Popups have to stay enabled for the
+handler to be consulted at all, since Chromium otherwise drops `window.open`
+before any handler runs, which also silently broke every `target="_blank"` link.
+
+**The UI is served with the headers a privileged origin should have.** Declared
+content type, `nosniff`, `Cross-Origin-Opener-Policy: same-origin`,
+`Cross-Origin-Resource-Policy: same-origin`, `X-Frame-Options: DENY`,
+`Referrer-Policy: no-referrer`. Measured: `window.crossOriginIsolated` is true.
+
+**A refused certificate says so.** It used to leave a blank tab, which reads as
+a broken browser and pushes people to retry over `http`. The refusal now keeps
+the real net error rather than collapsing to `ERR_FAILED`, and the tab shows
+what went wrong - `expired.badssl.com` gives "This connection is not private"
+with `ERR_CERT_DATE_INVALID`. Still no button to continue.
+
+**The build tells you when it has gone stale.**
+[app/staleness.js](../app/staleness.js) reads a date stamped in at build time
+and warns past 45 days, in the terminal and with a dialog over the browser
+window, at most once a day. Nothing else would: an old build looks exactly like
+a new one. No network call is involved.
+
+**Menu templates from the renderer are bounded as a whole tree.** 100 items
+and 3 levels in total, not per level - the earlier per-level limits still let a
+compromised renderer ask for millions of native menu items. Hostile input is
+covered in `test/unit/windowBridge.test.js`, including prototype pollution and
+a 5,000-level nesting.
+
+**A window's starting state no longer travels in its URL.** It used to be put
+into the query string, browsing history included. The main process now holds
+it until the window's preload collects it, once.
+
+**Phishing matching runs on documents only.** Top level pages and frames, which
+is where a fake login page or a malware download is. Those lists cost about
+1.3ms a match against 20us for the ad lists, so checking every image and script
+too made pages measurably slower.
+
+**Checked end to end, not just in unit tests.** `npm run e2e` launches the real
+browser on a throwaway profile and verifies each property above over the
+DevTools protocol. Several of the bugs recorded here were only found that way.
+
+**Installable so the browsing user cannot modify it.**
+`sudo sh tools/install-linux.sh` puts the packaged build in `/opt/brave-2016`
+owned by root, with a checksum manifest; `npm run verify-install` checks it.
+This is the integrity control that works on Linux, where Electron cannot verify
+its ASAR archive.
+
 ## What is still weak
 
-- **No phishing or malware blocklist.** There is no Safe Browsing equivalent, so
-  a page that Chrome would put behind a red warning loads normally here. The
-  `Filtering` pipeline is the natural place to add one.
-- **No cosmetic filtering, no HTTPS upgrading.** Requests are blocked but
-  elements are not hidden, and HTTPS Everywhere stays disabled, so `http://`
-  links stay on `http://`.
-- **The updater is inert.** There is no patch delivery mechanism: keeping this
-  safe means running `npm update` and rebuilding by hand. This is now the
-  largest single risk, because it is the one that grows over time.
-- **`app/gen/` is loaded from disk without verification.** Anything that can
-  write to the app directory owns the browser. That is true of most unpackaged
-  Electron apps.
+- **The updater is inert.** There is no patch delivery mechanism, so keeping
+  this safe means updating by hand. This is the largest remaining risk, because
+  it is the only one that grows on its own. `npm run doctor` reports whether the
+  Electron major is still supported, whether the fuses survived, and what npm
+  audit says.
+- **ASAR integrity is not verified on Linux.** `npm run package` produces an
+  ASAR build with `OnlyLoadAppFromAsar`, but Electron only verifies embedded
+  ASAR integrity on macOS and Windows. Use the root-owned install above; run
+  from a checkout, anything running as your user can modify the browser.
+- **Cosmetic filtering is styles only.** The lists also carry scriptlets, which
+  would mean running code in every page; they are not injected, so some ads
+  that are built by script still show.
+- **No certificate warning UI.** A bad certificate fails the load rather than
+  offering an informed choice, because there is no interstitial for it.
+- **The blocklists are third-party.** Phishing and ad blocking are only as good
+  as the lists, and a false positive has no in-browser bypass.
 
 ## Re-running the checks
 
-    npm test
+    npm test                  # unit tests: UI protocol, window.open, menu templates
+    npm run e2e -- --network  # the real browser, over the DevTools protocol
+    npm run doctor            # Electron support window, fuses, npm audit
+    npm run verify-install    # checksums of a root-owned install
 
-The privilege probe is not checked in; it is a page that reports
-`typeof require` and friends and calls `getUserMedia`, loaded over
-`python3 -m http.server`. To probe the UI window itself, start with
-`--remote-debugging-port=9333` and evaluate against the `page` target.
-
-Run the browser with `BRAVE_DEBUG=1` to see the `[security]` and `[bridge]`
-decisions as they are made.
+Run the browser with `BRAVE_DEBUG=1` to see the `[security]`, `[bridge]`,
+`[phishing]` and `[https]` decisions as they are made.
