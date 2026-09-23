@@ -12,14 +12,6 @@
 // so its warnings stay off.
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 
-// windows installation events etc...
-if (process.platform === 'win32') {
-  // TODO - register browser as HTTP handler in Windows (maybe need to fork)
-  if (require('electron-squirrel-startup')) {
-    process.exit(0)
-  }
-}
-
 // The product is called Brave 2016, but the profile directory keeps the name
 // it has always had, so a rename does not orphan anyone's session, cookies
 // and filter engines. Has to run before anything reads userData.

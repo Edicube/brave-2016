@@ -37,6 +37,8 @@ async function main () {
     env: Object.assign({}, process.env, {
       BRAVE_PROFILE_DIR: profile,
       BRAVE_HIDDEN: '1',
+      // so a failure says why
+      BRAVE_DEBUG: '1',
       BRAVE_PARENT_PID: String(process.pid)
     }),
     stdio: ['ignore', 'pipe', 'pipe']
