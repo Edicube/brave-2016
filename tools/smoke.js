@@ -53,7 +53,11 @@ async function main () {
   child.on('exit', (code) => { state.exited = code })
 
   let ok = false
-  const until = Date.now() + 90000
+  // an Intel build under Rosetta translates all of Chromium on first start,
+  // which on a fresh CI machine takes most of a minute and a half by itself
+  const rosetta = process.platform === 'darwin' && arch === 'x64' && process.arch === 'arm64'
+  const limit = rosetta ? 240000 : 90000
+  const until = Date.now() + limit
   while (Date.now() < until && state.exited === null) {
     try {
       const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()
@@ -79,7 +83,7 @@ async function main () {
   }
   console.error(state.exited !== null
     ? `the build exited early (code ${state.exited})`
-    : 'the build did not show its UI within 90s')
+    : `the build did not show its UI within ${limit / 1000}s`)
   console.error(log.slice(-3000))
   process.exit(1)
 }
