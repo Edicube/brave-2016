@@ -39,7 +39,7 @@ it. This is also the copy that can update itself:
 
 ```bash
 tar xzf brave-2016-<version>-linux-x64.tar.gz
-sudo sh "Brave 2016-linux-x64/install.sh"
+sudo sh brave-2016-linux-x64/install.sh
 brave-2016
 ```
 

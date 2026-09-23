@@ -39,12 +39,12 @@ test.after(() => fs.rmSync(scratch, { recursive: true, force: true }))
 // builds an archive; `extra` can add hostile entries
 function buildArchive (name, extra) {
   const dir = fs.mkdtempSync(path.join(scratch, 'src-'))
-  const root = path.join(dir, 'Brave 2016-linux-x64')
+  const root = path.join(dir, 'brave-2016-linux-x64')
   fs.mkdirSync(path.join(root, 'resources'), { recursive: true })
-  fs.writeFileSync(path.join(root, 'Brave 2016'), '#!/bin/sh\n', { mode: 0o755 })
+  fs.writeFileSync(path.join(root, 'brave-2016'), '#!/bin/sh\n', { mode: 0o755 })
   fs.writeFileSync(path.join(root, 'install.sh'), '#!/bin/sh\n')
   fs.writeFileSync(path.join(root, 'resources', 'app.asar'), 'asar')
-  const entries = ['Brave 2016-linux-x64']
+  const entries = ['brave-2016-linux-x64']
   if (extra) {
     entries.push(...extra(dir, root))
   }
@@ -85,7 +85,7 @@ const linuxOnly = { skip: process.platform !== 'linux' && 'the self-updater is L
 test('a correctly signed release is downloaded, checked and extracted', linuxOnly, async () => {
   const dir = await prepare(release({ archive: buildArchive('good.tgz') }))
   assert.ok(fs.existsSync(path.join(dir, 'install.sh')))
-  assert.ok(fs.existsSync(path.join(dir, 'Brave 2016')))
+  assert.ok(fs.existsSync(path.join(dir, 'brave-2016')))
   fs.rmSync(path.dirname(dir), { recursive: true, force: true })
 })
 
@@ -138,7 +138,7 @@ test('refuses an archive with a second top-level directory', linuxOnly, async ()
 })
 
 test('listing check refuses traversal, absolute paths and links', () => {
-  const root = 'Brave 2016-linux-x64'
+  const root = 'brave-2016-linux-x64'
   const line = (t, name) => `${t}rw-r--r-- u/g 1 2026-01-01 00:00 ${name}`
   assert.ok(Verify.checkListing(line('d', root + '/') + '\n' + line('-', root + '/a'), root).ok)
   for (const bad of [

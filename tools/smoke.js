@@ -14,11 +14,11 @@ const { spawn } = require('child_process')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { binaryIn } = require('./package')
+const { binaryIn, outDir } = require('./package')
 
 const root = path.join(__dirname, '..')
 const arch = process.arch
-const dist = path.join(root, 'dist', `Brave 2016-${process.platform}-${arch}`)
+const dist = path.join(root, 'dist', outDir(`${process.platform}-${arch}`))
 let binary = process.argv[2] || binaryIn(dist)
 if (process.platform === 'darwin' && binary.endsWith('.app')) {
   binary = path.join(binary, 'Contents', 'MacOS', 'Brave 2016')

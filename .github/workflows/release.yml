@@ -51,7 +51,7 @@ jobs:
 
       - name: Fuses on the packaged build
         shell: bash
-        run: node tools/fuses.js --verify "$(node -p "require('./tools/package').binaryIn('dist/Brave 2016-${{ matrix.platform }}')")"
+        run: node tools/fuses.js --verify "$(node -p "const p = require('./tools/package'); p.binaryIn('dist/' + p.outDir('${{ matrix.platform }}'))")"
 
       - name: Starts (Linux)
         if: runner.os == 'Linux'
@@ -59,10 +59,10 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
           # the setuid sandbox helper has to be root-owned 4755 to start at all;
           # the archive is made from a copy below, with ordinary ownership
-          cp -a "dist/Brave 2016-linux-x64" /tmp/smoke-build
+          cp -a dist/brave-2016-linux-x64 /tmp/smoke-build
           sudo chown root:root /tmp/smoke-build/chrome-sandbox
           sudo chmod 4755 /tmp/smoke-build/chrome-sandbox
-          xvfb-run -a node tools/smoke.js "/tmp/smoke-build/Brave 2016"
+          xvfb-run -a node tools/smoke.js /tmp/smoke-build/brave-2016
       - name: Starts (macOS, Windows)
         if: runner.os != 'Linux'
         run: node tools/smoke.js
@@ -73,7 +73,7 @@ jobs:
           TAG: ${{ github.ref_name }}
           PLATFORM: ${{ matrix.platform }}
         run: |
-          dir="Brave 2016-${PLATFORM}"
+          dir="$(node -p "require('./tools/package').outDir('${PLATFORM}')")"
           case "$PLATFORM" in
             linux-*)
               cp tools/install-linux.sh "dist/$dir/install.sh"
@@ -151,7 +151,7 @@ jobs:
           **Linux** - install root-owned, which also enables in-browser updates:
 
               tar xzf brave-2016-${TAG}-linux-x64.tar.gz
-              sudo sh "Brave 2016-linux-x64/install.sh"
+              sudo sh brave-2016-linux-x64/install.sh
 
           **macOS / Windows** - these builds are not code-signed (that needs paid
           Apple and Windows certificates), so the OS will warn on first launch:

@@ -25,6 +25,7 @@ const fs = require('fs')
 
 const root = path.join(__dirname, '..')
 const out = path.join(root, 'dist')
+const appName = process.platform === 'linux' ? 'brave-2016' : 'Brave 2016'
 
 async function main () {
   const { packager } = await import('@electron/packager')
@@ -39,7 +40,11 @@ async function main () {
   const paths = await packager({
     dir: root,
     out,
-    name: 'Brave 2016',
+    // No spaces on Linux: with the setuid sandbox, Chromium relaunches its
+    // zygote through a command line that splits a path at spaces, so a
+    // binary under "Brave 2016-linux-x64/Brave 2016" failed to start.
+    name: appName,
+    executableName: appName,
     appVersion: require(path.join(root, 'package.json')).version,
     overwrite: true,
     asar: true,
@@ -97,10 +102,17 @@ async function main () {
  * The packaged executable inside a packager output directory. On macOS this is
  * the .app bundle, which is what flipFuses and `open` both take.
  */
-module.exports.binaryIn = (dir) => path.join(dir, {
+module.exports.binaryIn = (dir, platform) => path.join(dir, {
   darwin: 'Brave 2016.app',
   win32: 'Brave 2016.exe'
-}[process.platform] || 'Brave 2016')
+}[platform || process.platform] || 'brave-2016')
+
+/**
+ * The directory packager writes for a platform, e.g. 'brave-2016-linux-x64'.
+ * @param {string} target platform-arch, e.g. 'linux-x64'
+ */
+module.exports.outDir = (target) =>
+  `${target.startsWith('linux') ? 'brave-2016' : 'Brave 2016'}-${target}`
 
 if (require.main === module) {
   main().catch((err) => {

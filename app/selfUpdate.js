@@ -37,7 +37,8 @@ const Verify = require('./lib/releaseVerify')
 const releaseKey = require('./lib/releaseKey')
 
 const installDir = '/opt/brave-2016'
-const archiveRoot = 'Brave 2016-linux-x64'
+const archiveRoot = 'brave-2016-linux-x64'
+const executable = 'brave-2016'
 
 const debug = (...args) => {
   if (process.env.BRAVE_DEBUG) {
@@ -50,7 +51,7 @@ const debug = (...args) => {
  */
 module.exports.canInstall = () =>
   process.platform === 'linux' &&
-  process.execPath === path.join(installDir, 'Brave 2016') &&
+  process.execPath === path.join(installDir, executable) &&
   fs.existsSync(path.join(installDir, 'SHA256SUMS'))
 
 function run (cmd, args, options) {
@@ -156,7 +157,7 @@ module.exports.prepare = async (release, options) => {
 
     const extracted = path.join(work, archiveRoot)
     if (!fs.existsSync(path.join(extracted, 'install.sh')) ||
-        !fs.existsSync(path.join(extracted, 'Brave 2016'))) {
+        !fs.existsSync(path.join(extracted, executable))) {
       throw new Error('the archive is not a Brave 2016 build')
     }
     return extracted
@@ -181,6 +182,6 @@ module.exports.install = async (extracted) => {
 }
 
 module.exports.restart = () => {
-  app.relaunch({ execPath: path.join(installDir, 'Brave 2016') })
+  app.relaunch({ execPath: path.join(installDir, executable) })
   app.exit(0)
 }

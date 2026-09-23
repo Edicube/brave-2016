@@ -43,8 +43,8 @@ jobs:
       - name: Packaged build starts
         run: |
           npm run package
-          sudo chown root:root "dist/Brave 2016-linux-x64/chrome-sandbox"
-          sudo chmod 4755 "dist/Brave 2016-linux-x64/chrome-sandbox"
+          sudo chown root:root "dist/brave-2016-linux-x64/chrome-sandbox"
+          sudo chmod 4755 "dist/brave-2016-linux-x64/chrome-sandbox"
           xvfb-run -a node tools/smoke.js
       - name: Longer fuzzing run (weekly)
         if: github.event_name == 'schedule'

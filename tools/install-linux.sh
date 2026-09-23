@@ -21,11 +21,11 @@ set -eu
 
 PREFIX="${PREFIX:-/opt/brave-2016}"
 SELF="$(cd "$(dirname "$0")" && pwd)"
-if [ -x "$SELF/Brave 2016" ]; then
+if [ -x "$SELF/brave-2016" ]; then
   # running as install.sh from inside an extracted release archive
   BUILD="$SELF"
 else
-  BUILD="$(cd "$SELF/.." && pwd)/dist/Brave 2016-linux-x64"
+  BUILD="$(cd "$SELF/.." && pwd)/dist/brave-2016-linux-x64"
 fi
 
 verify () {
@@ -53,7 +53,7 @@ if [ "${1:-}" = "--verify" ]; then
   exit 0
 fi
 
-if [ ! -x "$BUILD/Brave 2016" ]; then
+if [ ! -x "$BUILD/brave-2016" ]; then
   echo "no packaged build at $BUILD - run: npm run package" >&2
   exit 1
 fi
@@ -82,7 +82,7 @@ if [ "$(id -u)" -eq 0 ]; then
 
   cat > /usr/local/bin/brave-2016 <<LAUNCH
 #!/bin/sh
-exec "$PREFIX/Brave 2016" "\$@"
+exec "$PREFIX/brave-2016" "\$@"
 LAUNCH
   chmod 755 /usr/local/bin/brave-2016
 
