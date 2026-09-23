@@ -77,45 +77,50 @@ function release (files, options) {
 
 const prepare = (r) => SelfUpdate.prepare(r.rel, { repo, fetch: r.fetch, publicKey: pub })
 
-test('a correctly signed release is downloaded, checked and extracted', async () => {
+// The self-updater only exists for the Linux install in /opt, and drives GNU
+// tar at /usr/bin/tar; the end-to-end cases need both. The pure checks below
+// run everywhere.
+const linuxOnly = { skip: process.platform !== 'linux' && 'the self-updater is Linux only' }
+
+test('a correctly signed release is downloaded, checked and extracted', linuxOnly, async () => {
   const dir = await prepare(release({ archive: buildArchive('good.tgz') }))
   assert.ok(fs.existsSync(path.join(dir, 'install.sh')))
   assert.ok(fs.existsSync(path.join(dir, 'Brave 2016')))
   fs.rmSync(path.dirname(dir), { recursive: true, force: true })
 })
 
-test('refuses a checksum list signed with another key', async () => {
+test('refuses a checksum list signed with another key', linuxOnly, async () => {
   await assert.rejects(prepare(release({ archive: buildArchive('k.tgz') }, { key: other })), /not signed/)
 })
 
-test('refuses a garbage signature', async () => {
+test('refuses a garbage signature', linuxOnly, async () => {
   await assert.rejects(prepare(release({ archive: buildArchive('g.tgz') }, { sig: 'AAAA' })), /not signed/)
 })
 
-test('refuses an archive that does not match its signed checksum', async () => {
+test('refuses an archive that does not match its signed checksum', linuxOnly, async () => {
   const archive = buildArchive('t.tgz')
   await assert.rejects(prepare(release({ archive }, { sumOf: Buffer.from('something else') })), /does not match/)
 })
 
-test('refuses a signed list that does not name the archive', async () => {
+test('refuses a signed list that does not name the archive', linuxOnly, async () => {
   const archive = buildArchive('n.tgz')
   const sums = `${crypto.createHash('sha256').update(archive).digest('hex')}  brave-2016-v0.1.0-linux-x64.tar.gz\n`
   await assert.rejects(prepare(release({ archive }, { sums })), /does not cover/)
 })
 
-test('refuses assets hosted anywhere but this repository', async () => {
+test('refuses assets hosted anywhere but this repository', linuxOnly, async () => {
   const r = release({ archive: buildArchive('h.tgz') })
   r.rel.assets.forEach(a => { a.browser_download_url = a.browser_download_url.replace('Edicube/brave-2016', 'evil/brave-2016') })
   await assert.rejects(prepare(r), /no SHA256SUMS\.txt/)
 })
 
-test('refuses a tag that is not a plain version', async () => {
+test('refuses a tag that is not a plain version', linuxOnly, async () => {
   const r = release({ archive: buildArchive('v.tgz') })
   r.rel.tag_name = 'v1.0.0/../../x'
   await assert.rejects(prepare(r), /usable tag/)
 })
 
-test('refuses an archive containing a symlink', async () => {
+test('refuses an archive containing a symlink', linuxOnly, async () => {
   const archive = buildArchive('sym.tgz', (dir, root) => {
     fs.symlinkSync('/etc/passwd', path.join(root, 'link'))
     return []
@@ -123,7 +128,7 @@ test('refuses an archive containing a symlink', async () => {
   await assert.rejects(prepare(release({ archive })), /not a plain file/)
 })
 
-test('refuses an archive with a second top-level directory', async () => {
+test('refuses an archive with a second top-level directory', linuxOnly, async () => {
   const archive = buildArchive('extra.tgz', (dir) => {
     fs.mkdirSync(path.join(dir, 'elsewhere'))
     fs.writeFileSync(path.join(dir, 'elsewhere', 'x'), 'x')
