@@ -65,7 +65,9 @@ const messages = {
   BLOCKED_RESOURCE: _,
   // Forwarded from the main process because <webview>'s 'new-window' event
   // was removed in Electron 22
-  NEW_WINDOW_REQUESTED: _
+  NEW_WINDOW_REQUESTED: _,
+  // main to window: open a panel ('history', 'bookmarks', 'settings')
+  SHOW_PANEL: _
 }
 
 module.exports = mapValuesByKeys(messages)

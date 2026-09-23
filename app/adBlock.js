@@ -29,7 +29,8 @@ const watchForCosmetics = () => {
     // dom-ready rather than did-finish-load: the document is parsed, but
     // images and frames are still loading, so ads never get a moment on screen
     contents.on('dom-ready', () => {
-      if (!adblock || !Filtering.isResourceEnabled(module.exports.resourceName)) {
+      if (!adblock || !Filtering.isResourceEnabled(module.exports.resourceName) ||
+          Filtering.shieldsDownFor(module.exports.resourceName, contents.getURL())) {
         return
       }
       try {

@@ -1,0 +1,55 @@
+# Once a day: if master runs a different Electron than the latest release,
+# start a release of the next patch version. A merge made by the auto-merge
+# workflow does not trigger other workflows (GitHub suppresses events caused
+# by its own token), so this polls instead; release.yml then tests and smoke
+# tests every platform before anything is published.
+name: Auto-release
+
+on:
+  schedule:
+    - cron: '41 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.repository == 'Edicube/brave-2016'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write   # start release.yml
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: master
+
+      - name: Release if Electron changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          electron_at () {
+            git show "$1:package-lock.json" | node -e \
+              "let s = ''; process.stdin.on('data', d => { s += d }).on('end', () =>
+                 console.log(JSON.parse(s).packages['node_modules/electron'].version))"
+          }
+          latest="$(gh release view -R "$REPO" --json tagName -q .tagName)"
+          released="$(electron_at "$latest")"
+          current="$(electron_at HEAD)"
+          echo "latest release $latest has Electron $released, master has $current"
+          if [ "$released" = "$current" ]; then
+            exit 0
+          fi
+          next="$(node -e "
+            const semver = (v) => v.replace(/^v/, '').split('.').map(Number)
+            const newer = (a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]
+            const [a, b] = [semver(process.argv[1]), semver(require('./package.json').version)]
+            const base = newer(a, b) >= 0 ? a : b
+            console.log([base[0], base[1], base[2] + 1].join('.'))" "$latest")"
+          echo "starting release v$next"
+          gh workflow run release.yml -R "$REPO" --ref master -f version="$next"

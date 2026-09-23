@@ -111,24 +111,32 @@ function registerForSession (session) {
 
     let results
     let requestHeaders
+    // Header rewrites apply in turn, each to the result of the one before.
+    // Merging each callback's full header set with Object.assign instead let
+    // a later callback put back what an earlier one had removed - a
+    // third-party Cookie, say.
+    const original = details.requestHeaders
+    let working = Object.assign({}, original)
     for (let i = 0; i < filteringFns.length; i++) {
+      details.requestHeaders = working
       const currentResults = safely(filteringFns[i], details)
       if (!currentResults) {
         continue
       }
-      if (!module.exports.isResourceEnabled(currentResults.resourceName)) {
+      if (!module.exports.isResourceEnabled(currentResults.resourceName) ||
+          module.exports.shieldsDownFor(currentResults.resourceName, details.firstPartyUrl)) {
         continue
       }
       results = currentResults
-      // Header rewrites from every callback are merged, so that site hacks and
-      // the privacy rewrites do not cancel each other out.
       if (results.cbArgs && results.cbArgs.requestHeaders) {
-        requestHeaders = Object.assign(requestHeaders || {}, results.cbArgs.requestHeaders)
+        working = Object.assign({}, results.cbArgs.requestHeaders)
+        requestHeaders = working
       }
       if (results.shouldBlock) {
         break
       }
     }
+    details.requestHeaders = original
 
     if (!results) {
       cb({})
@@ -171,6 +179,34 @@ module.exports.init = () => {
   registerForSession(session.fromPartition(Partitions.web))
   registerForSession(session.fromPartition(Partitions.private))
 }
+
+// What the per-site switch in the site info panel turns off. Phishing and
+// malware blocking, HTTPS upgrading and certificate checks are not shields:
+// they protect you, not your privacy, and stay on everywhere.
+const shieldResources = new Set(['adblock', 'trackingProtection', 'privacyHeaders'])
+
+const hostOf = (target) => {
+  try {
+    return new URL(target).hostname
+  } catch (e) {
+    return null
+  }
+}
+
+/**
+ * Whether the user turned protections off for the site this request belongs to.
+ * @param {string} resourceName
+ * @param {string} firstPartyUrl
+ */
+module.exports.shieldsDownFor = (resourceName, firstPartyUrl) => {
+  if (!shieldResources.has(resourceName)) {
+    return false
+  }
+  const host = hostOf(firstPartyUrl)
+  return !!host && AppStore.getState().getIn(['siteSettings', host, 'shieldsDown']) === true
+}
+
+module.exports.shieldResources = shieldResources
 
 module.exports.isResourceEnabled = (resourceName) => {
   const enabledFromState = AppStore.getState().getIn([resourceName, 'enabled'])

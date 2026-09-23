@@ -39,6 +39,10 @@ module.exports = {
     // Bookmarks and open tabs are kept. Off by default; Bravery menu.
     enabled: false
   },
+  gpc: {
+    // Send Sec-GPC: 1 (Global Privacy Control) with every request
+    enabled: true
+  },
   privacyHeaders: {
     // Trim cross-site referrers to the origin and drop third-party cookies,
     // which is what Brave itself does. This breaks sign-in flows that federate

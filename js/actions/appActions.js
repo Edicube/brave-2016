@@ -116,6 +116,74 @@ const AppActions = {
       resourceName,
       enabled
     })
+  },
+
+  /**
+   * Records a visit in history. Private tabs are never recorded.
+   * @param {Object} frameProps - with location and title
+   */
+  recordVisit: function (frameProps) {
+    AppDispatcher.dispatch({
+      actionType: AppConstants.APP_ADD_SITE,
+      frameProps
+    })
+  },
+
+  /**
+   * Removes one address from history; bookmarks and pins are kept.
+   * @param {string} location
+   */
+  removeHistoryEntry: function (location) {
+    AppDispatcher.dispatch({
+      actionType: AppConstants.APP_REMOVE_HISTORY_ENTRY,
+      location
+    })
+  },
+
+  clearHistory: function () {
+    AppDispatcher.dispatch({
+      actionType: AppConstants.APP_CLEAR_HISTORY
+    })
+  },
+
+  /**
+   * Turns ad, tracker and third-party cookie blocking off (or back on) for
+   * one site.
+   * @param {string} host
+   * @param {boolean} shieldsDown
+   */
+  setSiteShields: function (host, shieldsDown) {
+    AppDispatcher.dispatch({
+      actionType: AppConstants.APP_SET_SITE_SHIELDS,
+      host,
+      shieldsDown
+    })
+  },
+
+  /**
+   * @param {string} theme - 'system', 'light' or 'dark'
+   */
+  setTheme: function (theme) {
+    AppDispatcher.dispatch({
+      actionType: AppConstants.APP_SET_THEME,
+      theme
+    })
+  },
+
+  /**
+   * @param {string} provider - a key of js/constants/dnsProviders.js
+   */
+  setDnsProvider: function (provider) {
+    AppDispatcher.dispatch({
+      actionType: AppConstants.APP_SET_DNS_PROVIDER,
+      provider
+    })
+  },
+
+  checkForUpdates: function () {
+    AppDispatcher.dispatch({
+      actionType: AppConstants.APP_CHECK_FOR_UPDATES
+    })
   }
 }
 

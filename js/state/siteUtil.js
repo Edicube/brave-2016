@@ -117,4 +117,51 @@ siteUtil.getSiteIconClass = function (site) {
   return 'fa-file-o'
 }
 
+const isUntagged = (site) => !site.get('tags') || site.get('tags').size === 0
+
+/**
+ * Most recent history entries kept. The whole app state is sent to every
+ * window on each change, so an unbounded history would slow every navigation.
+ */
+siteUtil.maxHistory = 1000
+
+/**
+ * Drops the oldest untagged (history-only) entries beyond the limit.
+ * Bookmarks and pins are never dropped.
+ */
+siteUtil.capHistory = function (sites, max) {
+  max = max || siteUtil.maxHistory
+  const history = sites.filter(isUntagged)
+  if (history.size <= max) {
+    return sites
+  }
+  const cutoff = history
+    .map(site => new Date(site.get('lastAccessed')).getTime() || 0)
+    .sort((a, b) => b - a)
+    .get(max - 1)
+  let kept = 0
+  return sites.filter(site => {
+    if (!isUntagged(site)) {
+      return true
+    }
+    const t = new Date(site.get('lastAccessed')).getTime() || 0
+    if (t > cutoff || (t === cutoff && kept < max)) {
+      kept++
+      return true
+    }
+    return false
+  })
+}
+
+/**
+ * Removes an address from history. A bookmarked or pinned entry stays.
+ */
+siteUtil.removeHistoryEntry = function (sites, location) {
+  return sites.filter(site => site.get('location') !== location || !isUntagged(site))
+}
+
+siteUtil.clearHistory = function (sites) {
+  return sites.filter(site => !isUntagged(site))
+}
+
 module.exports = siteUtil

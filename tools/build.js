@@ -71,6 +71,7 @@ const options = {
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify(mode),
+    'process.env.APP_VERSION': JSON.stringify(require(path.join(root, 'package.json')).version),
     'process.env.BRAVE_DEBUG': JSON.stringify(process.env.BRAVE_DEBUG || ''),
     // this bundle is only ever the renderer half; the dispatcher branches on it
     'process.type': JSON.stringify('renderer')

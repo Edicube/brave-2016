@@ -48,7 +48,7 @@ function serveFixtures () {
 
   // the "other site": records what it was sent, and tries to set a cookie
   const other = http.createServer((req, res) => {
-    crossSiteHeaders.push({ referer: req.headers.referer, cookie: req.headers.cookie })
+    crossSiteHeaders.push({ referer: req.headers.referer, cookie: req.headers.cookie, gpc: req.headers['sec-gpc'] })
     res.writeHead(200, { 'Content-Type': 'image/png', 'Set-Cookie': 'tracker=1; Path=/' })
     res.end()
   }).listen(pagePort + 1, '127.0.0.1')
@@ -222,6 +222,25 @@ async function functional () {
     return open
   })
 
+  await check('visited pages show in the history panel', async () => {
+    await shortcut('show-panel', 'history')
+    const listed = await waitFor(async () =>
+      (await ui(`Array.from(document.querySelectorAll('.siteList .siteLocation'))
+        .some(e => e.textContent === ${JSON.stringify(other)})`)) === true, 8000)
+    await ui("document.querySelector('.panelClose').click(), 1")
+    const closed = await waitFor(async () => (await ui("!!document.querySelector('.panel')")) === false, 3000)
+    return listed && closed
+  })
+
+  await check('the settings panel opens with the protections', async () => {
+    await shortcut('show-panel', 'settings')
+    const open = await waitFor(async () =>
+      (await ui("document.querySelectorAll('.settings input[type=checkbox]').length")) >= 8, 5000)
+    await ui("document.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 27, bubbles: true })), 1")
+    const closed = await waitFor(async () => (await ui("!!document.querySelector('.panel')")) === false, 3000)
+    return open && closed
+  })
+
   await check('opening and closing a tab', async () => {
     const before = await webviews()
     await shortcut('shortcut-new-frame', page)
@@ -278,9 +297,43 @@ async function run () {
     return !!last && last.referer === `http://127.0.0.1:${pagePort}/` && !last.cookie
   })
 
+  await check('Global Privacy Control is sent', async () =>
+    crossSiteHeaders.length > 0 && crossSiteHeaders.every(h => h.gpc === '1'))
+
   await check('ads and trackers are blocked', async () => {
     const ok = await waitFor(async () => /\[(adblock|trackingProtection)\] blocked/.test(log), 45000)
     return ok || (hasEngines ? false : 'skip')
+  })
+
+  await check('turning protections off for one site stops blocking there', async () => {
+    if (!hasEngines) return 'skip'
+    const info = () => ui("document.querySelector('.siteInfo') ? document.querySelector('.siteInfo').innerText : ''")
+    const openInfo = async () => {
+      await ui("document.querySelector('.urlbarIcon').click(), 1")
+      return waitFor(async () => (await ui("!!document.querySelector('.siteInfo li.shields input')")) === true, 5000)
+    }
+    const closeInfo = () => ui("document.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 27, bubbles: true })), 1")
+    // the toggle reloads the tab; the cross-site pixel says the reload ran
+    const toggle = async () => {
+      await openInfo()
+      const before = crossSiteHeaders.length
+      await ui("document.querySelector('.siteInfo li.shields input').click(), 1")
+      await closeInfo()
+      await waitFor(async () => crossSiteHeaders.length > before, 8000)
+      await waitFor(async () => (await web('document.readyState')) === 'complete', 8000)
+    }
+    const blocksAds = async () => {
+      await openInfo()
+      const text = await info()
+      await closeInfo()
+      return /Ads blocked/.test(text)
+    }
+    await toggle()
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    const offAllowed = !(await blocksAds())
+    await toggle()
+    const onBlocks = await waitFor(blocksAds, 8000)
+    return offAllowed && onBlocks
   })
 
   await check('window.open refuses javascript:, data: and brave://', async () => {

@@ -408,6 +408,11 @@ const doAction = (action) => {
       windowState = windowState.setIn(['ui', 'mouseInTitlebar'], action.mouseInTitlebar)
       windowStore.emitChange()
       break
+    case WindowConstants.WINDOW_SET_PANEL:
+      windowState = windowState.setIn(['ui', 'panel'],
+        ['history', 'bookmarks', 'settings'].includes(action.panel) ? action.panel : null)
+      windowStore.emitChange()
+      break
     case WindowConstants.WINDOW_SET_SITE_INFO_VISIBLE:
       windowState = windowState.setIn(['ui', 'siteInfo', 'isVisible'], action.isVisible)
       if (action.expandTrackingProtection !== undefined) {

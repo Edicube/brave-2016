@@ -206,10 +206,32 @@ function setDefaultWindowSize () {
 
 const appStore = new AppStore()
 
+// Light, dark, or whatever the system uses. Setting it here also tells web
+// pages, through prefers-color-scheme, the way Chrome's own setting does.
+function applyTheme (theme) {
+  electron.nativeTheme.themeSource = ['light', 'dark'].includes(theme) ? theme : 'system'
+}
+
+// Reloads the tabs showing a site once its protections changed. Done here,
+// after the state is set, so the reload cannot race ahead of the change, and
+// past the cache: a cached ad served on reload would never reach the filters.
+function reloadTabsOn (host) {
+  electron.webContents.getAllWebContents().forEach(wc => {
+    try {
+      if (wc.getType() === 'webview' && new URL(wc.getURL()).hostname === host) {
+        wc.reloadIgnoringCache()
+      }
+    } catch (e) {}
+  })
+}
+
 const handleAppAction = (action) => {
   switch (action.actionType) {
     case AppConstants.APP_SET_STATE:
       appState = action.appState
+      applyTheme(appState.get('theme'))
+      appState = appState.set('dnsProvider',
+        require('../../app/dnsProvider').current(electron.app.getPath('userData')))
       appStore.emitChange()
       break
     case AppConstants.APP_NEW_WINDOW:
@@ -258,9 +280,59 @@ const handleAppAction = (action) => {
       appState = appState.set('windows', windows.delete(action.appWindowId))
       appStore.emitChange()
       break
-    case AppConstants.APP_ADD_SITE:
-      appState = appState.set('sites', SiteUtil.addSite(appState.get('sites'), action.frameProps, action.tag))
+    case AppConstants.APP_ADD_SITE: {
+      const location = action.frameProps && action.frameProps.get && action.frameProps.get('location')
+      if (typeof location !== 'string' || location.length > 4096) {
+        break
+      }
+      // history is for web pages only; bookmarks and pins keep what they had
+      if (!action.tag && !/^https?:\/\//.test(location)) {
+        break
+      }
+      appState = appState.set('sites',
+        SiteUtil.capHistory(SiteUtil.addSite(appState.get('sites'), action.frameProps, action.tag)))
       appStore.emitChange()
+      break
+    }
+    case AppConstants.APP_REMOVE_HISTORY_ENTRY:
+      if (typeof action.location === 'string') {
+        appState = appState.set('sites', SiteUtil.removeHistoryEntry(appState.get('sites'), action.location))
+        appStore.emitChange()
+      }
+      break
+    case AppConstants.APP_CLEAR_HISTORY:
+      appState = appState.set('sites', SiteUtil.clearHistory(appState.get('sites')))
+      appStore.emitChange()
+      break
+    case AppConstants.APP_SET_SITE_SHIELDS:
+      // a bare hostname, nothing else
+      if (typeof action.host !== 'string' || action.host.length > 253 ||
+          !/^[a-z0-9.-]+$/i.test(action.host) || typeof action.shieldsDown !== 'boolean') {
+        break
+      }
+      appState = action.shieldsDown
+        ? appState.setIn(['siteSettings', action.host.toLowerCase(), 'shieldsDown'], true)
+        : appState.deleteIn(['siteSettings', action.host.toLowerCase()])
+      appStore.emitChange()
+      reloadTabsOn(action.host.toLowerCase())
+      break
+    case AppConstants.APP_SET_THEME:
+      if (!['system', 'light', 'dark'].includes(action.theme)) {
+        break
+      }
+      appState = appState.set('theme', action.theme)
+      applyTheme(action.theme)
+      appStore.emitChange()
+      break
+    case AppConstants.APP_SET_DNS_PROVIDER:
+      // takes effect on the next start: Chromium reads it before the app is ready
+      if (require('../../app/dnsProvider').choose(electron.app.getPath('userData'), action.provider)) {
+        appState = appState.set('dnsProvider', action.provider)
+        appStore.emitChange()
+      }
+      break
+    case AppConstants.APP_CHECK_FOR_UPDATES:
+      require('../../app/updateCheck').checkNow()
       break
     case AppConstants.APP_REMOVE_SITE:
       appState = appState.set('sites', SiteUtil.removeSite(appState.get('sites'), action.frameProps, action.tag))

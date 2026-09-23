@@ -1,4 +1,6 @@
-# Pushing a tag like v0.9.0 builds the release for Linux, Windows and macOS,
+# Pushing a tag like v0.9.0, or starting the workflow on master with a version
+# (auto-release.yml does that after an Electron update), builds the release for
+# Linux, Windows and macOS,
 # writes one checksum list for all of them, signs it for the self-updater,
 # attests where each archive was built (verifiable with
 # `gh attestation verify <file> -R Edicube/brave-2016`), and publishes.
@@ -7,12 +9,22 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release from master, like 0.10.1'
+        required: true
 
 permissions:
   contents: read
 
+env:
+  TAG: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
+
 jobs:
   build:
+    # a started release only ever comes from master
+    if: github.event_name == 'push' || github.ref == 'refs/heads/master'
     strategy:
       fail-fast: true
       matrix:
@@ -37,15 +49,23 @@ jobs:
           cache: npm
 
       - name: Tag matches package.json
+        if: github.event_name == 'push'
         shell: bash
-        env:
-          TAG: ${{ github.ref_name }}
         run: |
           version="v$(node -p "require('./package.json').version")"
           if [ "$version" != "$TAG" ]; then
             echo "tag $TAG does not match package.json $version" >&2
             exit 1
           fi
+      - name: Version from the started release
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "not a version: $TAG" >&2
+            exit 1
+          fi
+          npm version "${TAG#v}" --no-git-tag-version --allow-same-version
 
       - run: npm ci
       - run: npm test
@@ -79,7 +99,6 @@ jobs:
       - name: Archive
         shell: bash
         env:
-          TAG: ${{ github.ref_name }}
           PLATFORM: ${{ matrix.platform }}
         run: |
           dir="$(node -p "require('./tools/package').outDir('${PLATFORM}')")"
@@ -138,10 +157,10 @@ jobs:
         working-directory: artifacts
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
         run: |
-          gh release create "$TAG" -R "$REPO" brave-2016-* SHA256SUMS.txt SHA256SUMS.txt.sig \
+          # --target tags the built commit when the tag does not exist yet
+          gh release create "$TAG" -R "$REPO" --target "$GITHUB_SHA" brave-2016-* SHA256SUMS.txt SHA256SUMS.txt.sig \
             --title "Brave 2016 $TAG" \
             --notes-file - <<NOTES
           **Not safe for everyday use** - see the README for what that means.

@@ -307,12 +307,33 @@ menu templates, permission decisions, session restore, version comparison -
 and checks what must always hold. 3,000 inputs per property on every CI run,
 200,000 weekly with a fresh seed. It found a crash in the version comparison.
 
+**A later header rewrite could undo an earlier one.** Each header filter
+returned a full header set and the results were merged with `Object.assign`,
+so a filter running after the one that strips third-party cookies could hand
+the `Cookie` header back. [app/filtering.js](../app/filtering.js) now applies
+them in turn, each to the result of the one before.
+
+**Protections off for one site stay narrow.** The per-site switch only lifts
+ad blocking, tracker blocking and the cookie and referrer rules, keyed on the
+hostname of the page in the tab. Phishing blocking, the HTTPS upgrade,
+certificate checks and permission prompts are not affected by it. The main
+process validates the hostname before storing it, and reloads the site's tabs
+bypassing the cache, so an ad already in the cache cannot slip past the filters
+when protections come back on.
+
+**DNS choice is an allowlist.** Settings stores only a provider name; the
+DNS-over-HTTPS template comes from a fixed list in
+[js/constants/dnsProviders.js](../js/constants/dnsProviders.js), so a
+compromised renderer cannot point name resolution at a server of its choosing.
+
 ## What is still weak
 
-- **Updates are only as fast as one maintainer.** On Linux the installed
-  browser updates itself once a release exists, but someone has to merge the
-  Dependabot pull request and tag it. This is the largest remaining risk, because
-  it is the only one that grows on its own. `npm run doctor` reports whether the
+- **Updates depend on the pipeline staying green.** Electron patch and minor
+  updates from Dependabot now merge themselves once every CI check passes on
+  all four platforms, and a daily job releases them; installed Linux copies then
+  update themselves. A new Electron major, or a red CI, still waits for a
+  person. This is the largest remaining risk, because it is the only one that
+  grows on its own. `npm run doctor` reports whether the
   Electron major is still supported, whether the fuses survived, and what npm
   audit says.
 - **ASAR integrity is not verified on Linux.** `npm run package` produces an

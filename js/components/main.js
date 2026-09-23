@@ -19,6 +19,7 @@ const TabPages = require('./tabPages')
 const TabsToolbar = require('./tabsToolbar')
 const Button = require('./button')
 const SiteInfo = require('./siteInfo')
+const { SitesPanel, SettingsPanel } = require('./panels')
 
 // Constants
 const Config = require('../constants/config')
@@ -39,6 +40,8 @@ class Main extends ImmutableComponent {
     ipc.on(messages.STOP_LOAD, () => {
       Bridge.sendToSelf(messages.SHORTCUT_ACTIVE_FRAME_STOP)
     })
+    ipc.on(messages.SHOW_PANEL, (e, panel) => WindowActions.setPanel(panel))
+
     ipc.on(messages.CONTEXT_MENU_OPENED, (e, nodeProps) => {
       contextMenus.onMainContextMenu(nodeProps)
     })
@@ -105,8 +108,17 @@ class Main extends ImmutableComponent {
     this.activeFrame.goForward()
   }
 
+  shieldsDownFor (frame) {
+    try {
+      const host = new window.URL(frame.get('location')).hostname
+      return this.props.appState.getIn(['siteSettings', host, 'shieldsDown']) === true
+    } catch (e) {
+      return false
+    }
+  }
+
   onBraveMenu () {
-    // TODO
+    WindowActions.setPanel('settings')
   }
 
   onMainFocus () {
@@ -162,10 +174,20 @@ class Main extends ImmutableComponent {
             searchSuggestions={activeFrame && activeFrame.getIn(['navbar', 'urlbar', 'searchSuggestions'])}
             searchDetail={this.props.windowState.get('searchDetail')}
           />
+          {['history', 'bookmarks'].includes(this.props.windowState.getIn(['ui', 'panel']))
+            ? <SitesPanel
+                mode={this.props.windowState.getIn(['ui', 'panel'])}
+                sites={this.props.appState.get('sites')}
+              />
+            : null}
+          {this.props.windowState.getIn(['ui', 'panel']) === 'settings'
+            ? <SettingsPanel appState={this.props.appState} />
+            : null}
           {this.props.windowState.getIn(['ui', 'siteInfo', 'isVisible'])
             ? <SiteInfo
                 frameProps={activeFrame}
                 siteInfo={this.props.windowState.getIn(['ui', 'siteInfo'])}
+                shieldsDown={this.shieldsDownFor(activeFrame)}
                 onHide={this.onHideSiteInfo.bind(this)}
               />
             : null}

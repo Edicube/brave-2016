@@ -141,8 +141,10 @@ module.exports.initEarly = () => {
   // Resolve names over HTTPS so lookups cannot be read or spoofed on the wire.
   // 'secure' means no fallback to plaintext DNS.
   app.commandLine.appendSwitch('dns-over-https-mode', 'secure')
+  // The resolver is the user's choice (Settings), read from the profile here
+  // because the switch has to be set before the app is ready.
   app.commandLine.appendSwitch('dns-over-https-templates',
-    'https://dns.quad9.net/dns-query')
+    require('./dnsProvider').template(app.getPath('userData')))
 
   // Chromium features this browser has no use for. Each one is background
   // network chatter or another listening surface: server-side autofill
@@ -410,6 +412,21 @@ function hardenNetwork (ses) {
  * @param {object} details
  * @return {object}
  */
+/**
+ * Global Privacy Control: tells every site, first party or not, that the user
+ * does not agree to their data being sold or shared - a signal with legal
+ * weight in California and other places, and what Brave itself sends. The
+ * header only: navigator.globalPrivacyControl would need a script in the main
+ * world of every page.
+ */
+function globalPrivacyControl (details) {
+  return {
+    shouldBlock: false,
+    resourceName: 'gpc',
+    cbArgs: { requestHeaders: Object.assign({}, details.requestHeaders, { 'Sec-GPC': '1' }) }
+  }
+}
+
 function privacyHeaders (details) {
   const headers = details.requestHeaders || {}
   const firstParty = details.firstPartyUrl || details.url
@@ -498,4 +515,5 @@ module.exports.init = () => {
 
   // shares the single onBeforeSendHeaders hook that app/filtering.js owns
   require('./filtering').registerFilteringCB(privacyHeaders)
+  require('./filtering').registerFilteringCB(globalPrivacyControl)
 }

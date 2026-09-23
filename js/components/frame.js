@@ -69,6 +69,7 @@ class Frame extends ImmutableComponent {
 
   componentWillUnmount () {
     ipc.removeListener(messages.NEW_WINDOW_REQUESTED, this.onNewWindowRequested)
+    clearTimeout(this.titleTimer)
   }
 
   /**
@@ -227,7 +228,15 @@ class Frame extends ImmutableComponent {
         WindowActions.onWebviewLoadEnd(
           this.props.frame,
           this.webview.getURL())
+        this.recordVisit()
       }
+    })
+    // titles often arrive after the load; keep the history entry's current
+    // (debounced: some pages rewrite their title every second, and each
+    // recorded visit is a state change sent to every window)
+    this.webview.addEventListener('page-title-updated', () => {
+      clearTimeout(this.titleTimer)
+      this.titleTimer = setTimeout(() => this.recordVisit(), 1500)
     })
     this.webview.addEventListener('media-started-playing', ({ title }) => {
       WindowActions.setAudioPlaybackActive(this.props.frame, true)
@@ -253,6 +262,33 @@ class Frame extends ImmutableComponent {
     // to replace common divs.
     this.webview.send(messages.SET_AD_DIV_CANDIDATES,
       adDivCandidates, Config.vault.replacementUrl)
+  }
+
+  /**
+   * Adds the page to history. Private tabs and anything that is not a web
+   * page (the warning page, about:blank) are left out.
+   */
+  recordVisit () {
+    if (this.props.frame.get('isPrivate')) {
+      return
+    }
+    let location
+    let title
+    try {
+      location = this.webview.getURL()
+      title = this.webview.getTitle()
+    } catch (e) {
+      return
+    }
+    if (!/^https?:\/\//.test(location || '')) {
+      return
+    }
+    const key = location + '\n' + title
+    if (key === this.lastVisit) {
+      return
+    }
+    this.lastVisit = key
+    AppActions.recordVisit({ location, title, isPrivate: false })
   }
 
   goBack () {

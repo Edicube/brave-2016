@@ -610,6 +610,17 @@ const WindowActions = {
    * @param {boolean} expandTrackingProtection - If specified, indicates if the TP section should be expanded
    * @param {boolean} expandAdblock - If specified, indicates if the adblock section should be expanded
    */
+  /**
+   * Shows one of the full panels, or none.
+   * @param {string|null} panel - 'history', 'bookmarks', 'settings' or null
+   */
+  setPanel: function (panel) {
+    WindowDispatcher.dispatch({
+      actionType: WindowConstants.WINDOW_SET_PANEL,
+      panel
+    })
+  },
+
   setSiteInfoVisible: function (isVisible, expandTrackingProtection, expandAdblock) {
     WindowDispatcher.dispatch({
       actionType: WindowConstants.WINDOW_SET_SITE_INFO_VISIBLE,

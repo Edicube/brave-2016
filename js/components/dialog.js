@@ -12,8 +12,13 @@ const KeyCodes = require('../constants/keyCodes')
  */
 class Dialog extends ImmutableComponent {
   componentDidMount () {
-    window.addEventListener('keydown', this.onKeyDown.bind(this))
+    this.onWindowKeyDown = this.onKeyDown.bind(this)
+    window.addEventListener('keydown', this.onWindowKeyDown)
     this.dialog.focus()
+  }
+
+  componentWillUnmount () {
+    window.removeEventListener('keydown', this.onWindowKeyDown)
   }
 
   onClick () {

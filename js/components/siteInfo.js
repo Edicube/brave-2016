@@ -8,8 +8,26 @@ const ImmutableComponent = require('./immutableComponent')
 const cx = require('../lib/classSet.js')
 const Dialog = require('./dialog')
 const WindowActions = require('../actions/windowActions')
+const AppActions = require('../actions/appActions')
 
 class SiteInfo extends ImmutableComponent {
+  get host () {
+    try {
+      const u = new window.URL(this.props.frameProps.get('location'))
+      return /^https?:$/.test(u.protocol) ? u.hostname : null
+    } catch (e) {
+      return null
+    }
+  }
+
+  // Ads, trackers and third-party cookies for this one site; phishing
+  // blocking, HTTPS and certificate checks stay on regardless.
+  toggleShields (e) {
+    e.stopPropagation()
+    AppActions.setSiteShields(this.host, !this.props.shieldsDown)
+    // the main process reloads the site's tabs once the setting is stored
+  }
+
   get isExtendedValidation () {
     return this.props.frameProps.getIn(['security', 'isExtendedValidation'])
   }
@@ -115,9 +133,29 @@ class SiteInfo extends ImmutableComponent {
       </li>
     )
 
+    const shields = this.host && (
+      <li className='shields'>
+        <label onClick={(e) => e.stopPropagation()}>
+          <input
+            type='checkbox'
+            checked={!this.props.shieldsDown}
+            onChange={this.toggleShields.bind(this)}
+          />
+          Protections on {this.host}
+        </label>
+        {this.props.shieldsDown && (
+          <div className='shieldsNote'>
+            Ads, trackers and third-party cookies are allowed here.
+            Phishing blocking and HTTPS stay on.
+          </div>
+        )}
+      </li>
+    )
+
     return (
       <Dialog onHide={this.props.onHide} className='siteInfo' isClickDismiss>
         <ul>
+          {shields || null}
           {secureIcon}
           {trackingSummary || null}
           {trackingList || null}
@@ -131,6 +169,7 @@ class SiteInfo extends ImmutableComponent {
 
 SiteInfo.propTypes = {
   frameProps: PropTypes.object,
+  shieldsDown: PropTypes.bool,
   siteInfo: PropTypes.object,
   onHide: PropTypes.func
 }

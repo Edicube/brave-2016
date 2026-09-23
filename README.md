@@ -73,7 +73,12 @@ To open a page directly: `npm start -- https://example.com`
   Browsing service Electron does not have.
 - **HTTPS first**: `http://` addresses are tried over HTTPS, falling back only
   when a site genuinely has no TLS.
-- **Drops third-party cookies** and trims cross-site referrers to the origin.
+- **Drops third-party cookies** and trims cross-site referrers to the origin,
+  and sends Global Privacy Control (`Sec-GPC: 1`), which sites in some places
+  are legally bound to honour as an opt-out of sale and sharing.
+- **Protections per site**: when a site breaks, turn protections off just for
+  it from the lock icon in the address bar. Phishing blocking and HTTPS stay on.
+- **Encrypted DNS** through Quad9 (default), Cloudflare or Mullvad.
 - **Refuses bad certificates** with an explanation, and asks before every
   download.
 - **Asks before a site gets the camera, microphone or notifications**, for this
@@ -89,8 +94,13 @@ To open a page directly: `npm start -- https://example.com`
 - **Looks like an ordinary Chrome** to sites, instead of announcing itself as
   "Brave2016 ... Electron", which singles you out and gets you refused by some
   sign-in pages.
-- **Optional, in the Bravery menu**: HTTPS-only (never fall back to plain HTTP),
-  and clearing cookies and site data when Brave closes.
+- **History, bookmarks and settings**: History > Show All History (Ctrl+Y),
+  Bookmarks > Manage Bookmarks (Ctrl+Alt+B), and Settings (Ctrl+, or the Brave
+  button) for the protections, DNS provider and theme. History keeps the last
+  1,000 pages and never records private tabs.
+- **Dark theme**, following the system or set in Settings.
+- **Optional, in Settings or the Bravery menu**: HTTPS-only (never fall back to
+  plain HTTP), and clearing cookies and site data when Brave closes.
 
 ## Scripts
 

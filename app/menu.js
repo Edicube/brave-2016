@@ -3,6 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 const electron = require('electron')
+const BrowserWindow = electron.BrowserWindow
 const app = electron.app
 const Menu = electron.Menu
 const messages = require('../js/constants/messages')
@@ -80,10 +81,18 @@ const init = (args) => {
     role: 'about'
   }
 
+  // opens one of the window's panels (history, bookmarks, settings)
+  const showPanel = (panel) => (item, focusedWindow) => {
+    const wnd = focusedWindow || BrowserWindow.getAllWindows()[0]
+    if (wnd) {
+      wnd.webContents.send(messages.SHOW_PANEL, panel)
+    }
+  }
+
   const preferencesMenuItem = {
-    label: 'Preferences...',
-    enabled: false,
-    accelerator: 'CmdOrCtrl+,'
+    label: isDarwin ? 'Preferences...' : 'Settings...',
+    accelerator: 'CmdOrCtrl+,',
+    click: showPanel('settings')
   }
 
   const fileMenu = [
@@ -449,7 +458,7 @@ const init = (args) => {
         }, {
           label: 'Show All History',
           accelerator: 'CmdOrCtrl+Y',
-          enabled: false
+          click: showPanel('history')
         }
       ]
     }, {
@@ -464,8 +473,8 @@ const init = (args) => {
           type: 'separator'
         }, {
           label: 'Manage Bookmarks',
-          enabled: false,
-          accelerator: 'Alt+CmdOrCtrl+B'
+          accelerator: 'Alt+CmdOrCtrl+B',
+          click: showPanel('bookmarks')
         }, {
           type: 'separator'
         }, {
@@ -545,13 +554,10 @@ const init = (args) => {
           enabled: false
         }, {
           label: 'History',
-          // On OSX, Shift+Cmd+H cannot be overridden.
-          accelerator: 'CmdOrCtrl+Y',
-          enabled: false
+          click: showPanel('history')
         }, {
           label: 'Bookmarks',
-          accelerator: 'Alt+CmdOrCtrl+B',
-          enabled: false
+          click: showPanel('bookmarks')
         }, {
           label: 'Tab Manager',
           accelerator: 'Alt+CmdOrCtrl+M',
