@@ -43,6 +43,16 @@ module.exports = {
     // no-tls-hosts.json in the profile directory; delete it to retry them.
     enabled: true
   },
+  httpsOnly: {
+    // With httpsUpgrade: never fall back to plain HTTP, show a warning page
+    // instead. Off by default; Bravery menu.
+    enabled: false
+  },
+  clearOnExit: {
+    // Clear cookies, site storage and cache for normal tabs when Brave closes.
+    // Bookmarks and open tabs are kept. Off by default; Bravery menu.
+    enabled: false
+  },
   privacyHeaders: {
     // Trim cross-site referrers to the origin and drop third-party cookies,
     // which is what Brave itself does. This breaks sign-in flows that federate

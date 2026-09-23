@@ -108,6 +108,16 @@ module.exports.watch = (contents) => {
     attempted.delete(host)
     module.exports.markNoTls(host)
     const downgraded = 'http://' + validatedUrl.slice('https://'.length)
+
+    if (httpsOnly()) {
+      debug(`${errorDescription} on ${host}; HTTPS-only, not falling back`)
+      const warning = require('./security').blockedPageUrl(downgraded, 'nohttps', errorDescription)
+      if (!contents.isDestroyed()) {
+        contents.loadURL(warning).catch(() => {})
+      }
+      return
+    }
+
     debug(`${errorDescription} on ${host}, falling back to http`)
     if (!contents.isDestroyed()) {
       contents.loadURL(downgraded).catch(() => {})
@@ -126,8 +136,14 @@ module.exports.watch = (contents) => {
   })
 }
 
+// HTTPS-only: upgrade every host, never fall back to plain HTTP
+const httpsOnly = () => Filtering.isResourceEnabled('httpsOnly')
+
 function checkRequest (details) {
   if (details.resourceType !== 'mainFrame' || !details.url.startsWith('http://')) {
+    return undefined
+  }
+  if (!httpsOnly() && !Filtering.isResourceEnabled(module.exports.resourceName)) {
     return undefined
   }
 
@@ -138,7 +154,7 @@ function checkRequest (details) {
     return undefined
   }
   const host = parsed.host
-  if (!host || noTls.has(host)) {
+  if (!host || (noTls.has(host) && !httpsOnly())) {
     return undefined
   }
   // localhost and bare IPs are not going to have a certificate

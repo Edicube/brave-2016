@@ -92,6 +92,40 @@ async function evaluate (type, expression) {
   return result.result.value
 }
 
+// The most recently started renderer under the browser process: the UI's
+// renderer comes up first, so with one tab open this is the tab's.
+function newestRenderer (browserPid) {
+  let rows
+  try {
+    rows = require('child_process').execFileSync('ps', ['-eo', 'pid=,ppid=,args='], { encoding: 'utf8' })
+  } catch (e) {
+    return null
+  }
+  const procs = rows.trim().split('\n').map(line => {
+    const m = line.trim().match(/^(\d+)\s+(\d+)\s+(.*)$/)
+    return m && { pid: Number(m[1]), ppid: Number(m[2]), args: m[3] }
+  }).filter(Boolean)
+  const byPid = new Map(procs.map(p => [p.pid, p]))
+  const descends = (p) => {
+    for (let q = p; q; q = byPid.get(q.ppid)) {
+      if (q.ppid === browserPid) return true
+    }
+    return false
+  }
+  const renderers = procs.filter(p => /--type=renderer/.test(p.args) && descends(p))
+    .map(p => ({ pid: p.pid, id: Number((p.args.match(/renderer-client-id=(\d+)/) || [])[1]) }))
+    .sort((a, b) => b.id - a.id)
+  return renderers.length > 1 ? renderers[0].pid : null
+}
+
+// the app's own action path, as the menu uses it
+const setProtection = (resourceName, enabled) => evaluate('page',
+  `window.braveBridge.send('app-action', ${JSON.stringify({
+    actionType: 'app-set-resource-enabled', resourceName, enabled
+  })}), 'ok'`)
+
+let expectedCrashes = 0
+
 const ui = (expr) => evaluate('page', expr)
 const web = (expr) => evaluate('webview', expr)
 const navigate = (target) => ui(`document.querySelector('webview').src = ${JSON.stringify(target)}, 'ok'`)
@@ -282,6 +316,32 @@ async function run () {
     await networkChecks()
   }
 
+  await check('a page cannot open brave://ui by itself', async () => {
+    await navigate(page)
+    await waitFor(async () => (await tabUrl()) === page, 8000)
+    await web("location.href = 'brave://ui/blocked.html#%7B%22reason%22%3A%22phishing%22%7D', 1")
+    await sleep(2000)
+    return (await tabUrl()) === page
+  })
+
+  await check('a crashed tab shows a page with a reload button', async () => {
+    // Electron ignores Page.crash and chrome://crash, so crash it the way the
+    // kernel would: kill the tab's renderer process outright.
+    const tabRenderer = newestRenderer(current.pid)
+    if (!tabRenderer) {
+      return 'skip'
+    }
+    expectedCrashes++
+    process.kill(tabRenderer, 'SIGKILL')
+    const shown = await waitFor(async () =>
+      (await web("(document.querySelector('h1') || {}).textContent")) === 'This page crashed', 10000)
+    if (!shown) {
+      return false
+    }
+    await web("document.getElementById('action').click(), 1")
+    return waitFor(async () => (await tabUrl()) === page, 8000)
+  })
+
   await check('window.open of an http page opens a tab', async () => {
     await navigate(page)
     await waitFor(async () => (await web('typeof window.probe')) === 'function', 8000)
@@ -293,6 +353,18 @@ async function run () {
 }
 
 async function networkChecks () {
+  await check('[network] HTTPS-only refuses a site without HTTPS', async () => {
+    await setProtection('httpsOnly', true)
+    try {
+      await navigate('http://neverssl.com/')
+      return await waitFor(async () =>
+        (await web("(document.querySelector('h1') || {}).textContent")) ===
+          'This site does not offer a secure connection', 20000)
+    } finally {
+      await setProtection('httpsOnly', false)
+    }
+  })
+
   await check('[network] URL bar suggestions: arrow down and enter opens one', async () => {
     await ui(`(function () {
       var input = document.getElementById('urlInput')
@@ -344,6 +416,81 @@ async function networkChecks () {
 // --- harness ----------------------------------------------------------------
 
 let hasEngines = false
+let current = null
+
+function launch (profile) {
+  const electron = path.join(root, 'node_modules', 'electron', 'dist', 'electron')
+  const child = spawn(electron, [root, `--remote-debugging-port=${debugPort}`, page], {
+    env: Object.assign({}, process.env, {
+      BRAVE_DEBUG: '1',
+      BRAVE_PROFILE_DIR: profile,
+      // the browser exits by itself if this script dies without cleaning up
+      BRAVE_PARENT_PID: String(process.pid),
+      // refuse instead of opening a prompt nobody is there to answer
+      BRAVE_DENY_PERMISSIONS: '1',
+      // no window flashing through test pages on your screen
+      BRAVE_HIDDEN: process.argv.includes('--show') ? '' : '1'
+    }),
+    stdio: ['ignore', 'pipe', 'pipe']
+  })
+  child.stdout.on('data', d => { log += d })
+  child.stderr.on('data', d => { log += d })
+  current = child
+  return child
+}
+
+// Runs last: needs a real quit and a second start on the same profile
+async function clearOnExitCheck (child, profile) {
+  await check('clear site data on exit removes cookies', async () => {
+    while ((await webviews()) > 1) {
+      await shortcut('shortcut-close-frame')
+      await sleep(500)
+    }
+    await navigate(page)
+    await waitFor(async () => (await tabUrl()) === page, 8000)
+    await web("document.cookie = 'e2e=kept; max-age=3600; path=/', 1")
+    if (!/e2e=kept/.test(await web('document.cookie'))) {
+      return false
+    }
+    await setProtection('clearOnExit', true)
+    await sleep(500)
+
+    const exited = new Promise(resolve => child.once('exit', resolve))
+    child.kill('SIGTERM')
+    await Promise.race([exited, sleep(15000)])
+    const cleared = /\[clearOnExit\] site data cleared/.test(log)
+
+    launch(profile)
+    const up = await waitFor(async () =>
+      (await targets()).some(t => t.type === 'webview' && t.url.startsWith(page)), 30000)
+    if (!up) {
+      return false
+    }
+    // the restored session may bring back other tabs, so read this one by URL
+    let cookie = null
+    await waitFor(async () => {
+      const target = (await targets()).find(t => t.type === 'webview' && t.url.startsWith(page))
+      if (!target) {
+        return false
+      }
+      const ws = new WebSocket(target.webSocketDebuggerUrl)
+      await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject })
+      const value = await new Promise(resolve => {
+        ws.onmessage = (e) => {
+          const m = JSON.parse(e.data)
+          if (m.id === 1) {
+            resolve(m.result && m.result.result ? m.result.result.value : null)
+          }
+        }
+        ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression: 'document.cookie', returnByValue: true } }))
+      })
+      ws.close()
+      cookie = value
+      return typeof value === 'string'
+    }, 10000)
+    return cleared && !/e2e=kept/.test(cookie || '')
+  })
+}
 
 async function main () {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'brave-e2e-'))
@@ -357,20 +504,7 @@ async function main () {
   }
 
   const servers = serveFixtures()
-  const electron = path.join(root, 'node_modules', 'electron', 'dist', 'electron')
-  const child = spawn(electron, [root, `--remote-debugging-port=${debugPort}`, page], {
-    env: Object.assign({}, process.env, {
-      BRAVE_DEBUG: '1',
-      BRAVE_PROFILE_DIR: profile,
-      // refuse instead of opening a prompt nobody is there to answer
-      BRAVE_DENY_PERMISSIONS: '1',
-      // no window flashing through test pages on your screen
-      BRAVE_HIDDEN: process.argv.includes('--show') ? '' : '1'
-    }),
-    stdio: ['ignore', 'pipe', 'pipe']
-  })
-  child.stdout.on('data', d => { log += d })
-  child.stderr.on('data', d => { log += d })
+  const child = launch(profile)
 
   let exitCode = 1
   try {
@@ -382,8 +516,16 @@ async function main () {
     await sleep(1500)
     await run()
 
-    const uncaught = (log.match(/Uncaught|render process gone|preload error|Warning: /g) || []).length
+    await clearOnExitCheck(child, profile)
+
+    const crashes = (log.match(/render process gone/g) || []).length
+    const uncaught = (log.match(/Uncaught|preload error|Warning: /g) || []).length +
+      Math.max(0, crashes - expectedCrashes)
     results.push({ name: 'no uncaught errors, React warnings or crashed renderers', status: uncaught ? 'FAIL' : 'pass' })
+    if (uncaught) {
+      log.split('\n').filter(l => /Uncaught|preload error|Warning: |render process gone|could not send/.test(l))
+        .slice(0, 10).forEach(l => console.log('    > ' + l.slice(0, 220)))
+    }
 
     for (const r of results) {
       console.log(`  ${r.status.padEnd(4)}  ${r.name}${r.why ? '  (' + r.why + ')' : ''}`)
@@ -395,11 +537,30 @@ async function main () {
   } catch (e) {
     console.error(e.message)
   } finally {
-    child.kill('SIGKILL')
+    (current || child).kill('SIGKILL')
     servers.forEach(s => s.close())
     fs.rmSync(profile, { recursive: true, force: true })
   }
   process.exit(exitCode)
+}
+
+// a bug in this script must not leave a browser behind either
+process.on('uncaughtException', (e) => {
+  console.error(e)
+  if (current) {
+    current.kill('SIGKILL')
+  }
+  process.exit(1)
+})
+
+// Ctrl+C or a timeout: take the browser down too
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.on(signal, () => {
+    if (current) {
+      current.kill('SIGKILL')
+    }
+    process.exit(130)
+  })
 }
 
 main()

@@ -9,7 +9,6 @@ const Menu = electron.Menu
 const messages = require('../js/constants/messages')
 const dialog = electron.dialog
 const AppActions = require('../js/actions/appActions')
-const HttpsEverywhere = require('./httpsEverywhere')
 const AdBlock = require('./adBlock')
 const TrackingProtection = require('./trackingProtection')
 const Filtering = require('./filtering')
@@ -46,6 +45,17 @@ const sendToFocusedWindow = (focusedWindow, message) => {
  */
 const init = (args) => {
   args = args || {}
+
+  // A Bravery menu checkbox backed by a resource's enabled flag in app state
+  const protectionToggle = (label, resourceName) => ({
+    type: 'checkbox',
+    label,
+    checked: Filtering.isResourceEnabled(resourceName),
+    click: function () {
+      AppActions.setResourceEnabled(resourceName, !Filtering.isResourceEnabled(resourceName))
+      init({ bookmarked: bookmarkPageMenuItem.checked })
+    }
+  })
   // Create references to menu items that need to be updated dynamically
   const bookmarkPageMenuItem = {
     label: 'Bookmark this page',
@@ -485,64 +495,19 @@ const init = (args) => {
     }, {
       label: 'Bravery',
       submenu: [
+        protectionToggle('Block ads', AdBlock.resourceName),
+        protectionToggle('Block trackers', TrackingProtection.resourceName),
+        protectionToggle('Block phishing and malware sites', 'phishing'),
+        protectionToggle('Block third-party cookies', 'privacyHeaders'),
         {
-          label: 'Manage...',
-          enabled: false
-        }, {
           type: 'separator'
-        }, {
-          label: 'GiveBack to this site',
-          enabled: false,
-          accelerator: 'Shift+CmdOrCtrl+Y'
-        }, {
-          label: 'Stay ad supported on this site',
-          enabled: false,
-          accelerator: 'Shift+CmdOrCtrl+N'
-        }, {
+        },
+        protectionToggle('Upgrade connections to HTTPS', 'httpsUpgrade'),
+        protectionToggle('HTTPS-only: never fall back to HTTP', 'httpsOnly'),
+        {
           type: 'separator'
-        }, {
-          label: 'Site Protection Settings (Changes invoke reload)',
-          enabled: false // Hack to make this look like a section header.
-        }, {
-          type: 'checkbox',
-          label: 'Replace ads',
-          checked: Filtering.isResourceEnabled(AdBlock.resourceName),
-          click: function (item, focusedWindow) {
-            AppActions.setResourceEnabled(AdBlock.resourceName, !Filtering.isResourceEnabled(AdBlock.resourceName))
-            init({ bookmarked: bookmarkPageMenuItem.checked })
-          }
-        }, {
-          type: 'checkbox',
-          label: 'Block 3rd party cookies',
-          enabled: false,
-          checked: true
-        }, {
-          type: 'checkbox',
-          label: 'Block Tracking',
-          checked: Filtering.isResourceEnabled(TrackingProtection.resourceName),
-          click: function (item, focusedWindow) {
-            AppActions.setResourceEnabled(TrackingProtection.resourceName, !Filtering.isResourceEnabled(TrackingProtection.resourceName))
-            init({ bookmarked: bookmarkPageMenuItem.checked })
-          }
-        }, {
-          type: 'checkbox',
-          label: 'Block Popups',
-          enabled: false,
-          checked: true
-        }, {
-          type: 'checkbox',
-          label: 'HTTPS everywhere',
-          checked: Filtering.isResourceEnabled(HttpsEverywhere.resourceName),
-          click: function (item, focusedWindow) {
-            AppActions.setResourceEnabled(HttpsEverywhere.resourceName, !Filtering.isResourceEnabled(HttpsEverywhere.resourceName))
-            init({ bookmarked: bookmarkPageMenuItem.checked })
-          }
-        }, {
-          type: 'separator'
-        }, {
-          label: 'Disable all protection on this site...',
-          enabled: false
-        }
+        },
+        protectionToggle('Clear cookies and site data when Brave closes', 'clearOnExit')
       ]
     }, {
       label: 'Window',

@@ -29,6 +29,16 @@
       }
       .why { color: #5c5c5c; font-size: .93em; }
       .why code { display: inline; padding: .1em .3em; margin: 0; }
+      button {
+        margin-top: .6em;
+        padding: .55em 1.2em;
+        font: inherit;
+        border: 0;
+        border-radius: 4px;
+        background: #2b2b2b;
+        color: #fff;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
@@ -37,6 +47,7 @@
       <p id="summary">Brave did not load it.</p>
       <code id="url">the address is not available</code>
       <p class="why" id="why"></p>
+      <button id="action" hidden></button>
     </main>
     <script src="blocked.js"></script>
   </body>

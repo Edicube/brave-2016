@@ -36,7 +36,8 @@ const debug = (...args) => {
 const documentTypes = new Set(['mainFrame', 'subFrame'])
 
 function checkRequest (details) {
-  if (!engine || !documentTypes.has(details.resourceType)) {
+  if (!engine || !documentTypes.has(details.resourceType) ||
+      !Filtering.isResourceEnabled(module.exports.resourceName)) {
     return undefined
   }
 

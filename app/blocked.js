@@ -27,6 +27,20 @@
            'are refused too. There is no button here to continue, and reaching the ' +
            'site over http instead would send everything in the clear.'
     },
+    nohttps: {
+      heading: 'This site does not offer a secure connection',
+      summary: 'HTTPS-only is on, and this site could not be reached over HTTPS.',
+      why: 'Loading it over plain HTTP would send everything - including anything ' +
+           'you type - in the clear, readable and changeable by anyone on the ' +
+           'network. To reach it anyway, turn off "HTTPS-only" in the Bravery menu.'
+    },
+    crashed: {
+      heading: 'This page crashed',
+      summary: 'The process showing this tab stopped unexpectedly.',
+      why: 'This is usually the page itself - running out of memory, or a bug in ' +
+           'the browser engine. Reloading often works.',
+      action: 'Reload'
+    },
     unknown: {
       heading: 'This page was not loaded',
       summary: 'Brave refused to load it.',
@@ -52,4 +66,15 @@
   document.getElementById('url').textContent =
     detail.url || 'the address is not available'
   document.title = reason.heading
+
+  // The one action this page offers: reloading a crashed page. Only ever to a
+  // web address, never to anything else that could arrive in the fragment.
+  var button = document.getElementById('action')
+  if (reason.action && /^https?:\/\//.test(detail.url || '')) {
+    button.textContent = reason.action
+    button.hidden = false
+    button.addEventListener('click', function () {
+      window.location.href = detail.url
+    })
+  }
 })()

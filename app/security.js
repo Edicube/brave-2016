@@ -94,8 +94,30 @@ const appDir = path.join(__dirname, '..')
 // Schemes a web page may be navigated to. file: would expose local files and
 // the internal schemes expose Chromium's own pages, so a page cannot reach
 // either one through its own webview.
-const webviewSchemes = new Set([
-  'http:', 'https:', 'about:', 'blob:', 'data:', UiProtocol.scheme + ':'])
+// brave: is not here: the main process loads the warning page into a tab with
+// loadURL, which these guards do not see, and a page must not be able to open
+// it - or anything else on brave://ui - itself.
+const webviewSchemes = new Set(['http:', 'https:', 'about:', 'blob:', 'data:'])
+
+/**
+ * The User-Agent string of an ordinary desktop Chrome of the same version, in
+ * Chrome's reduced form (minor versions zeroed). Electron's default names the
+ * app and Electron itself - "Brave2016/0.8.0 ... Electron/44.4.5" - which picks
+ * this browser out of a crowd of millions, and gets it refused by sites that
+ * block embedded browsers, Google sign-in among them.
+ * @return {string}
+ */
+function ordinaryUserAgent () {
+  const major = String(process.versions.chrome).split('.')[0]
+  const platform = {
+    darwin: 'Macintosh; Intel Mac OS X 10_15_7',
+    win32: 'Windows NT 10.0; Win64; x64'
+  }[process.platform] || 'X11; Linux x86_64'
+  return `Mozilla/5.0 (${platform}) AppleWebKit/537.36 (KHTML, like Gecko) ` +
+    `Chrome/${major}.0.0.0 Safari/537.36`
+}
+
+module.exports.ordinaryUserAgentForTest = ordinaryUserAgent
 
 /**
  * Everything that has to happen before the app is ready. Called at require
@@ -103,6 +125,8 @@ const webviewSchemes = new Set([
  * inside the ready handler silently abandons the rest of startup.
  */
 module.exports.initEarly = () => {
+  app.userAgentFallback = ordinaryUserAgent()
+
   // Has to precede any session: registers brave:// as standard and secure
   UiProtocol.registerScheme()
 
@@ -174,6 +198,21 @@ module.exports.initEarly = () => {
     if (contents.getType() === 'webview') {
       // WebRTC otherwise reveals local network addresses to any page
       contents.setWebRTCIPHandlingPolicy('default_public_interface_only')
+
+      // A crashed renderer otherwise leaves a blank tab with no way back
+      contents.on('render-process-gone', (e, details) => {
+        if (details.reason === 'clean-exit') {
+          return
+        }
+        const lost = contents.getURL()
+        debug(`renderer gone (${details.reason}) on ${lost}`)
+        setImmediate(() => {
+          if (!contents.isDestroyed()) {
+            contents.loadURL(module.exports.blockedPageUrl(lost, 'crashed', details.reason))
+              .catch(() => {})
+          }
+        })
+      })
 
       // A refused certificate otherwise leaves a blank tab, which reads as
       // "the browser is broken" and pushes people towards retrying over http.
@@ -263,6 +302,7 @@ function hardenSession (ses) {
     return
   }
   hardenedSessions.add(ses)
+  ses.setUserAgent(ordinaryUserAgent())
   registerPermissionHandlers(ses)
   // A page must never reach the user's screen without asking. An empty grant
   // carries no streams, which Electron treats as a refusal.
@@ -454,7 +494,7 @@ module.exports.init = () => {
   // the UI's own pages, and the warning page shown in place of a blocked site
   UiProtocol.handle(session.defaultSession)
   ;[Partitions.web, Partitions.private].forEach((partition) =>
-    UiProtocol.handle(session.fromPartition(partition)))
+    UiProtocol.handle(session.fromPartition(partition), ['blocked.html', 'blocked.js']))
 
   // shares the single onBeforeSendHeaders hook that app/filtering.js owns
   require('./filtering').registerFilteringCB(privacyHeaders)

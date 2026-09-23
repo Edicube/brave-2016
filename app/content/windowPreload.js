@@ -24,6 +24,14 @@ const checkChannel = (channel) => {
   }
 }
 
+// Everything sent is reduced to plain JSON data first. Electron's IPC in 2016
+// serialized through JSON, which silently dropped functions, and the 2016
+// stores rely on that: URL bar suggestions carry onClick handlers inside the
+// window state. Structured clone refuses functions instead, and a refused
+// window state at quit left the main process waiting for an answer forever -
+// the browser would not close.
+const plain = (value) => value === undefined ? undefined : JSON.parse(JSON.stringify(value))
+
 // Listeners are wrapped so removeListener can find them again by identity
 const wrapped = new Map()
 
@@ -38,7 +46,15 @@ contextBridge.exposeInMainWorld('braveBridge', {
 
   send (channel, ...args) {
     checkChannel(channel)
-    ipcRenderer.send(channel, ...args)
+    try {
+      ipcRenderer.send(channel, ...args.map(plain))
+    } catch (e) {
+      // name the channel and the offending action, or a lost message is
+      // untraceable
+      const what = args[0] && args[0].actionType ? ` (${args[0].actionType})` : ''
+      console.error(`could not send on ${channel}${what}: ${e.message}`)
+      throw e
+    }
   },
 
   on (channel, listener) {
@@ -65,7 +81,12 @@ contextBridge.exposeInMainWorld('braveBridge', {
   // stands in for remote.getCurrentWebContents().send()
   sendToSelf (channel, ...args) {
     checkChannel(channel)
-    ipcRenderer.send('bridge-send-to-self', channel, args)
+    try {
+      ipcRenderer.send('bridge-send-to-self', channel, args.map(plain))
+    } catch (e) {
+      console.error(`could not send to self on ${channel}: ${e.message}`)
+      throw e
+    }
   },
 
   // stands in for remote.getCurrentWebContents().downloadURL()

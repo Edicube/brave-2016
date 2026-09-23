@@ -49,6 +49,7 @@ const Phishing = require('./phishing')
 const HttpsUpgrade = require('./httpsUpgrade')
 const Staleness = require('./staleness')
 const UpdateCheck = require('./updateCheck')
+const ClearOnExit = require('./clearOnExit')
 const CmdLine = require('./cmdLine')
 const WindowOpen = require('./windowOpen')
 const Security = require('./security')
@@ -77,6 +78,19 @@ app.on('second-instance', (event, argv) => {
 
 // Must precede 'ready'
 Security.initEarly()
+
+// A browser started by a test harness (tools/e2e.js) goes away with it, even
+// if the harness itself is killed outright and cannot clean up after itself.
+if (process.env.BRAVE_PARENT_PID) {
+  const parent = Number(process.env.BRAVE_PARENT_PID)
+  setInterval(() => {
+    try {
+      process.kill(parent, 0)
+    } catch (e) {
+      app.exit(0)
+    }
+  }, 1000).unref()
+}
 
 // Last-ditch containment: an unexpected throw must neither kill the browser
 // nor pop Electron's crash dialog over something recoverable. Logged and kept
@@ -287,6 +301,7 @@ app.on('ready', function () {
     HttpsUpgrade.init()
     Staleness.init()
     UpdateCheck.init()
+    ClearOnExit.init()
     WindowOpen.init()
 
     ipcMain.on(messages.UPDATE_REQUESTED, (e) => {

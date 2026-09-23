@@ -138,10 +138,17 @@ const securityHeaders = {
 /**
  * @param {Session} ses register the handler on this session
  */
-module.exports.handle = (ses) => {
+/**
+ * @param {Session} ses register the handler on this session
+ * @param {Array.<string>=} only restrict it to these files (relative to the UI
+ *   root). Web content sessions only ever need the warning page, so that is
+ *   all they are given - not the browser's own UI.
+ */
+module.exports.handle = (ses, only) => {
+  const allowed = only && new Set(only.map(f => path.join(uiRoot, f)))
   ses.protocol.handle(scheme, async (request) => {
     const file = resolve(request.url)
-    if (!file) {
+    if (!file || (allowed && !allowed.has(file))) {
       return new Response('', { status: 404 })
     }
     // net.fetch reads through the ASAR archive the same way require does

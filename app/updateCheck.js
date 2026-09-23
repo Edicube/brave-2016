@@ -38,7 +38,9 @@ const stampPath = () => path.join(app.getPath('userData'), 'update-check')
  * @return {number} negative if a < b, positive if a > b, 0 if equal
  */
 function compareVersions (a, b) {
-  const parts = (v) => String(v || '').replace(/^v/, '').split('-')[0]
+  // anything but a string or number counts as no version at all
+  const text = (v) => (typeof v === 'string' || typeof v === 'number') ? String(v) : ''
+  const parts = (v) => text(v).replace(/^v/, '').split('-')[0]
     .split('.').map(n => parseInt(n, 10) || 0)
   const pa = parts(a)
   const pb = parts(b)
@@ -90,7 +92,7 @@ async function check (config) {
   }
 
   const current = app.getVersion()
-  const latest = release && release.tag_name
+  const latest = release && typeof release.tag_name === 'string' && release.tag_name
   if (!latest || compareVersions(latest, current) <= 0) {
     debug(`up to date (${current}, latest ${latest})`)
     return

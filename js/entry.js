@@ -24,6 +24,9 @@ if (process.env.BRAVE_DEBUG) {
   window.addEventListener('unhandledrejection', (e) => {
     console.error('unhandled rejection:', (e.reason && e.reason.stack) || e.reason)
   })
+  window.addEventListener('error', (e) => {
+    console.error('uncaught error:', (e.error && e.error.stack) || e.message)
+  })
 }
 
 // get appStore from url

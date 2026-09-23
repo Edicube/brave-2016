@@ -9,35 +9,42 @@ const keyCodes = require('../constants/keyCodes')
 const Button = require('./button.js')
 const WindowActions = require('../actions/windowActions')
 
+// what to search for when the state has none, rather than throwing on render
+const emptyFindDetail = Immutable.Map({ searchString: '', caseSensitivity: false })
+
 export default class FindBar extends ImmutableComponent {
+  get findDetail () {
+    return this.props.findDetail || emptyFindDetail
+  }
+
   onChange (e) {
     WindowActions.setFindDetail(this.props.frame, Immutable.fromJS({
       searchString: e.target.value,
-      caseSensitivity: this.props.findDetail.get('caseSensitivity')
+      caseSensitivity: this.findDetail.get('caseSensitivity')
     }))
   }
 
   onCaseSensitivityChange (e) {
     WindowActions.setFindDetail(this.props.frame, Immutable.fromJS({
-      searchString: this.props.findDetail.get('searchString'),
+      searchString: this.findDetail.get('searchString'),
       caseSensitivity: e.target.checked
     }))
   }
 
   onFind () {
-    this.props.onFindAll(this.props.findDetail.get('searchString'),
-      this.props.findDetail.get('caseSensitivity'))
+    this.props.onFindAll(this.findDetail.get('searchString'),
+      this.findDetail.get('caseSensitivity'))
   }
 
   onFindNext () {
-    this.props.onFindAll(this.props.findDetail.get('searchString'),
-      this.props.findDetail.get('caseSensitivity'),
+    this.props.onFindAll(this.findDetail.get('searchString'),
+      this.findDetail.get('caseSensitivity'),
       true)
   }
 
   onFindPrev () {
-    this.props.onFindAgain(this.props.findDetail.get('searchString'),
-      this.props.findDetail.get('caseSensitivity'),
+    this.props.onFindAgain(this.findDetail.get('searchString'),
+      this.findDetail.get('caseSensitivity'),
       false)
   }
 
@@ -97,7 +104,7 @@ export default class FindBar extends ImmutableComponent {
   }
 
   get isCaseSensitive () {
-    this.props.findDetail.get('caseSensitivity')
+    this.findDetail.get('caseSensitivity')
   }
 
   render () {
@@ -106,7 +113,7 @@ export default class FindBar extends ImmutableComponent {
     }
 
     let findMatchText
-    if (this.numberofMatches !== -1 && this.props.findDetail.get('searchString')) {
+    if (this.numberofMatches !== -1 && this.findDetail.get('searchString')) {
       const l10nArgs = {
         activeMatchOrdinal: this.activeMatchOrdinal,
         numberofMatches: this.numberofMatches
@@ -128,7 +135,7 @@ export default class FindBar extends ImmutableComponent {
             ref={(node) => { this.searchString = node }}
             onKeyDown={this.onKeyDown.bind(this)}
             onChange={this.onChange.bind(this)}
-            value={this.props.findDetail.get('searchString')}
+            value={this.findDetail.get('searchString')}
           />
           {findMatchText}
         </span>

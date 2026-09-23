@@ -61,6 +61,26 @@ module.exports.saveAppState = (payload) => {
 }
 
 /**
+ * @param {string} location a saved tab address
+ * @return {string} the address to reopen the tab at
+ */
+const restorableLocation = (location) => {
+  if (typeof location !== 'string' || !location.startsWith('brave://')) {
+    return location
+  }
+  try {
+    const hash = location.slice(location.indexOf('#') + 1)
+    const original = JSON.parse(decodeURIComponent(hash)).url
+    if (/^https?:\/\//.test(original)) {
+      return original
+    }
+  } catch (e) {}
+  return 'about:blank'
+}
+
+module.exports.restorableLocationForTest = restorableLocation
+
+/**
  * Cleans session data from unwanted values.
  */
 module.exports.cleanSessionData = (sessionData) => {
@@ -87,6 +107,11 @@ module.exports.cleanSessionData = (sessionData) => {
     // Full history is not saved yet
     frame.canGoBack = false
     frame.canGoForward = false
+
+    // A tab left on the warning page (brave://ui/blocked.html) is restored to
+    // the page it was standing in for: a web page may not load brave://, and
+    // the address simply gets checked again.
+    frame.location = restorableLocation(frame.location)
 
     // Set the frame src to the last visited location
     // or else users will see the first visited URL.
@@ -121,8 +146,11 @@ module.exports.cleanSessionData = (sessionData) => {
     delete frame.basicAuthDetail
     // Remove open search details
     delete frame.searchDetail
-    // Remove find in page details
+    // Remove find in page details, and close the find bar with them: a bar
+    // restored as open with no details behind it threw on render, and in
+    // React 19 an error during render empties the whole window.
     delete frame.findDetail
+    frame.findbarShown = false
     // Don't store child tab open ordering since keys
     // currently get re-generated when session store is
     // restored.  We will be able to keep this once we
