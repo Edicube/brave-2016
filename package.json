@@ -33,7 +33,7 @@
     "prop-types": "^15.8.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "tldts-experimental": "^7.4.14",
+    "tldts-experimental": "^7.4.16",
     "url": "^0.11.4",
     "urlutil.js": "^0.1.1"
   },
