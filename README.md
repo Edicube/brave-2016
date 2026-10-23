@@ -65,6 +65,11 @@ if it is missing, and hardens that binary with Electron fuses.
 
 To open a page directly: `npm start -- https://example.com`
 
+**Starting it with a double click (Linux).** `npm run launcher` builds a small
+`brave-2016` program in the checkout, like the `firefox` file in a Firefox
+download: double-click it in the file manager, or point a menu entry at it.
+It needs no terminal and no npm, and keeps working after `npm run update`.
+
 ## What it does
 
 - **Blocks ads and trackers** (EasyList, EasyPrivacy, uBlock Origin lists), both

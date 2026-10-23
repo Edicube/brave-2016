@@ -16,7 +16,8 @@
     "doctor": "node ./tools/doctor.js",
     "e2e": "npm run build && node ./tools/e2e.js",
     "verify-install": "sh ./tools/install-linux.sh --verify",
-    "update": "node ./tools/update.js"
+    "update": "node ./tools/update.js",
+    "launcher": "cc -O2 -Wall -o brave-2016 tools/launcher.c"
   },
   "repository": "brave/browser-laptop",
   "author": {
