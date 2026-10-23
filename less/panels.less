@@ -259,15 +259,6 @@
     background: #2b2b2e;
   }
 
-  #navigator input {
-    background: #3a3a3e;
-    color: #e8e8e8;
-
-    &:hover {
-      background: #444448;
-    }
-  }
-
   .tab {
     color: #e8e8e8;
 
@@ -298,7 +289,48 @@
     color: #e8e8e8;
   }
 
-  .navbutton, .fa {
+  .navbutton, .fa, span.browserButton, .prevTab, .nextTab {
     color: #d0d0d0;
+  }
+
+  span.browserButton:not([disabled]):hover {
+    color: #fff;
+  }
+
+  .top .backforward {
+    background: linear-gradient(to bottom, #2b2b2e, #4a4a4f);
+    border-color: #555;
+
+    span, span:not([disabled]):hover {
+      color: #e8e8e8;
+    }
+  }
+
+  #navigator {
+    input, input:hover {
+      background: #3a3a3e;
+      color: #e8e8e8;
+    }
+
+    input:hover {
+      background: #444448;
+    }
+
+    input:focus {
+      background: #1f1f22;
+      color: #e8e8e8;
+    }
+
+    input::placeholder {
+      color: #9a9a9e;
+    }
+
+    .urlbarIcon {
+      color: #b0b0b4;
+    }
+  }
+
+  .tabPage.active {
+    background-color: #d0d0d0;
   }
 }
